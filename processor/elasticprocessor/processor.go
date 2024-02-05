@@ -17,10 +17,11 @@ import (
 type ElasticProcessor struct {
 	cfg    *Config
 	logger *zap.Logger
+	storage map[string]any
 }
 
 func newProcessor(set processor.CreateSettings, cfg *Config) *ElasticProcessor {
-	return &ElasticProcessor{cfg: cfg, logger: set.Logger}
+	return &ElasticProcessor{cfg: cfg, logger: set.Logger, storage: make(map[string]any)}
 }
 
 func (p *ElasticProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
@@ -32,7 +33,7 @@ func (p *ElasticProcessor) processMetrics(_ context.Context, md pmetric.Metrics)
 
 			if p.cfg.AddSystemMetrics {
 				if strings.HasPrefix(scopeMetric.Scope().Name(), "otelcol/hostmetricsreceiver") {
-					if err := hostmetrics.AddElasticSystemMetrics(scopeMetric); err != nil {
+					if err := hostmetrics.AddElasticSystemMetrics(scopeMetric, p.storage); err != nil {
 						p.logger.Error("error adding hostmetrics data", zap.Error(err))
 					}
 				}
