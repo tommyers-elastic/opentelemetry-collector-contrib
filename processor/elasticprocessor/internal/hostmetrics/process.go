@@ -8,7 +8,7 @@ import (
 func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 	var timestamp pcommon.Timestamp
 	var threads, memUsage, memVirtual, fdOpen int64
-	var memUtil float64
+	var memUtil, total, cpuTimeValue float64
 
 	for i := 0; i < metrics.Len(); i++ {
 		metric := metrics.At(i)
@@ -32,10 +32,29 @@ func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 			dp := metric.Sum().DataPoints().At(0)
 			timestamp = dp.Timestamp()
 			fdOpen = dp.IntValue()
+		} else if metric.Name() == "process.cpu.time" {
+			dataPoints := metric.Sum().DataPoints()
+			for j := 0; j < dataPoints.Len(); j++ {
+				dp := dataPoints.At(j)
+				timestamp = dp.Timestamp()
+				value := dp.DoubleValue()
+				if state, ok := dp.Attributes().Get("state"); ok {
+					switch state.Str() {
+					case "system":
+						total += value
+					case "user":
+						total += value
+					case "wait":
+						total += value
+
+					}
+				}
+			}
 		}
 	}
 
 	memUtilPct := memUtil / 100
+	cpuTimeValue = total * 1000
 
 	addMetrics(metrics, dataset,
 		metric{
@@ -67,6 +86,18 @@ func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 			name:      "system.process.fd.open",
 			timestamp: timestamp,
 			intValue:  &fdOpen,
+		},
+		metric{
+			dataType:    Gauge,
+			name:        "process.memory.pct",
+			timestamp:   timestamp,
+			doubleValue: &memUtilPct,
+		},
+		metric{
+			dataType:    Sum,
+			name:        "system.process.cpu.total.value",
+			timestamp:   timestamp,
+			doubleValue: &cpuTimeValue,
 		},
 	)
 
