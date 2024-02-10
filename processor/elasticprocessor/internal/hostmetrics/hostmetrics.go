@@ -49,7 +49,7 @@ func AddElasticSystemMetrics(scopeMetrics pmetric.ScopeMetrics, storage map[stri
 	case "process":
 		return addProcessMetrics(scopeMetrics.Metrics(), dataset)
 	case "processes":
-		return addProcessesMetrics(scopeMetrics.Metrics(), dataset)
+		return addProcessSummaryMetrics(scopeMetrics.Metrics(), dataset)
 	default:
 		return fmt.Errorf("no matching transform function found for scope '%s'", scope.Name())
 	}

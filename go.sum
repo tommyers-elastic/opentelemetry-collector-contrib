@@ -984,6 +984,8 @@ github.com/ishleenk17/opentelemetry-collector-contrib/processor/elasticprocessor
 github.com/ishleenk17/opentelemetry-collector-contrib/processor/elasticprocessor v0.0.0-20240203071249-1d18877c8eeb/go.mod h1:EDhNj/4y/IGUH0EHt0zG9rNF/AyTxuTD3EgnEvc5l7k=
 github.com/ishleenk17/opentelemetry-collector-contrib/processor/elasticprocessor v0.0.0-20240208093424-745b253620f5 h1:uxJEVgc36F/KgRLvFfh6z5Z/GA+BGMUdXUT3y/GTdxQ=
 github.com/ishleenk17/opentelemetry-collector-contrib/processor/elasticprocessor v0.0.0-20240208093424-745b253620f5/go.mod h1:EDhNj/4y/IGUH0EHt0zG9rNF/AyTxuTD3EgnEvc5l7k=
+github.com/ishleenk17/opentelemetry-collector-contrib/processor/elasticprocessor v0.0.0-20240210141131-99d945c3883f h1:zfWuS4W+p+Gqcwjel0ferqVlrzLq2g1JaXiZtVjHeQs=
+github.com/ishleenk17/opentelemetry-collector-contrib/processor/elasticprocessor v0.0.0-20240210141131-99d945c3883f/go.mod h1:EDhNj/4y/IGUH0EHt0zG9rNF/AyTxuTD3EgnEvc5l7k=
 github.com/jackc/chunkreader v1.0.0/go.mod h1:RT6O25fNZIuasFJRyZ4R/Y2BbhasbmZXF9QQ7T3kePo=
 github.com/jackc/chunkreader/v2 v2.0.0/go.mod h1:odVSm741yZoC3dpHEUXIqA9tQRhFrgOHwnPIn9lDKlk=
 github.com/jackc/chunkreader/v2 v2.0.1 h1:i+RDz65UE+mmpjTfyz0MoVTnzeYxroil2G82ki7MGG8=

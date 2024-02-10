@@ -5,7 +5,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 )
 
-func addProcessesMetrics(metrics pmetric.MetricSlice, dataset string) error {
+func addProcessSummaryMetrics(metrics pmetric.MetricSlice, dataset string) error {
 	var timestamp pcommon.Timestamp
 	var idleProcesses, sleepingProcesses, stoppedProcesses, zombieProcesses, totalProcesses int64
 
