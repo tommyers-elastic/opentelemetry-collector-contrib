@@ -7,7 +7,7 @@ import (
 
 func addProcessesMetrics(metrics pmetric.MetricSlice, dataset string) error {
 	var timestamp pcommon.Timestamp
-	var total, value, idleProcesses, sleepingProcesses, stoppedProcesses, zombieProcesses, totalProcesses int64
+	var idleProcesses, sleepingProcesses, stoppedProcesses, zombieProcesses, totalProcesses int64
 
 	// iterate all metrics in the current scope and generate the additional Elastic system integration metrics
 	for i := 0; i < metrics.Len(); i++ {
@@ -18,28 +18,27 @@ func addProcessesMetrics(metrics pmetric.MetricSlice, dataset string) error {
 			for j := 0; j < dataPoints.Len(); j++ {
 				dp := dataPoints.At(j)
 				timestamp = dp.Timestamp()
-				value = dp.IntValue()
+				value := dp.IntValue()
 				if status, ok := dp.Attributes().Get("status"); ok {
 					switch status.Str() {
 					case "idle":
 						idleProcesses = value
-						total += value
+						totalProcesses += value
 					case "sleeping":
 						sleepingProcesses = value
-						total += value
+						totalProcesses += value
 					case "stopped":
 						stoppedProcesses = value
-						total += value
+						totalProcesses += value
 					case "zombies":
 						zombieProcesses = value
-						total += value
+						totalProcesses += value
 					}
 				}
 			}
 		}
 
 	}
-	totalProcesses = total
 
 	addMetrics(metrics, dataset,
 		metric{
