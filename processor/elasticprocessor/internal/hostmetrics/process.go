@@ -6,7 +6,7 @@ import (
 )
 
 func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
-	var timestamp pcommon.Timestamp
+	var timestamp, startTimestamp pcommon.Timestamp
 	var threads, memUsage, memVirtual, fdOpen, ioReadBytes, ioWriteBytes, ioReadOperations, ioWriteOperations int64
 	var memUtil, memUtilPct, total, cpuTimeValue, systemCpuTime, userCpuTime float64
 
@@ -37,6 +37,7 @@ func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 			for j := 0; j < dataPoints.Len(); j++ {
 				dp := dataPoints.At(j)
 				timestamp = dp.Timestamp()
+				startTimestamp = dp.StartTimestamp()
 				value := dp.DoubleValue()
 				if state, ok := dp.Attributes().Get("state"); ok {
 					switch state.Str() {
@@ -128,28 +129,32 @@ func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 			doubleValue: &memUtilPct,
 		},
 		metric{
-			dataType:    Sum,
-			name:        "system.process.cpu.total.value",
-			timestamp:   timestamp,
-			doubleValue: &cpuTimeValue,
+			dataType:       Sum,
+			name:           "system.process.cpu.total.value",
+			timestamp:      timestamp,
+			startTimestamp: startTimestamp,
+			doubleValue:    &cpuTimeValue,
 		},
 		metric{
-			dataType:    Sum,
-			name:        "system.process.cpu.system.ticks",
-			timestamp:   timestamp,
-			doubleValue: &systemCpuTime,
+			dataType:       Sum,
+			name:           "system.process.cpu.system.ticks",
+			timestamp:      timestamp,
+			startTimestamp: startTimestamp,
+			doubleValue:    &systemCpuTime,
 		},
 		metric{
-			dataType:    Sum,
-			name:        "system.process.cpu.user.ticks",
-			timestamp:   timestamp,
-			doubleValue: &userCpuTime,
+			dataType:       Sum,
+			name:           "system.process.cpu.user.ticks",
+			timestamp:      timestamp,
+			startTimestamp: startTimestamp,
+			doubleValue:    &userCpuTime,
 		},
 		metric{
-			dataType:    Sum,
-			name:        "system.process.cpu.total.ticks",
-			timestamp:   timestamp,
-			doubleValue: &cpuTimeValue,
+			dataType:       Sum,
+			name:           "system.process.cpu.total.ticks",
+			timestamp:      timestamp,
+			startTimestamp: startTimestamp,
+			doubleValue:    &cpuTimeValue,
 		},
 		metric{
 			dataType:  Sum,
