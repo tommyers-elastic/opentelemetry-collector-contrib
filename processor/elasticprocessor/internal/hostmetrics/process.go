@@ -18,25 +18,20 @@ func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 			threads = dp.IntValue()
 		} else if metric.Name() == "process.memory.utilization" {
 			dp := metric.Gauge().DataPoints().At(0)
-			timestamp = dp.Timestamp()
 			memUtil = dp.DoubleValue()
 		} else if metric.Name() == "process.memory.usage" {
 			dp := metric.Sum().DataPoints().At(0)
-			timestamp = dp.Timestamp()
 			memUsage = dp.IntValue()
 		} else if metric.Name() == "process.memory.virtual" {
 			dp := metric.Sum().DataPoints().At(0)
-			timestamp = dp.Timestamp()
 			memVirtual = dp.IntValue()
 		} else if metric.Name() == "process.open_file_descriptors" {
 			dp := metric.Sum().DataPoints().At(0)
-			timestamp = dp.Timestamp()
 			fdOpen = dp.IntValue()
 		} else if metric.Name() == "process.cpu.time" {
 			dataPoints := metric.Sum().DataPoints()
 			for j := 0; j < dataPoints.Len(); j++ {
 				dp := dataPoints.At(j)
-				timestamp = dp.Timestamp()
 				startTimestamp = dp.StartTimestamp()
 				value := dp.DoubleValue()
 				if state, ok := dp.Attributes().Get("state"); ok {
@@ -57,7 +52,6 @@ func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 			dataPoints := metric.Sum().DataPoints()
 			for j := 0; j < dataPoints.Len(); j++ {
 				dp := dataPoints.At(j)
-				timestamp = dp.Timestamp()
 				value := dp.IntValue()
 				if direction, ok := dp.Attributes().Get("direction"); ok {
 					switch direction.Str() {
@@ -72,7 +66,6 @@ func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 			dataPoints := metric.Sum().DataPoints()
 			for j := 0; j < dataPoints.Len(); j++ {
 				dp := dataPoints.At(j)
-				timestamp = dp.Timestamp()
 				value := dp.IntValue()
 				if direction, ok := dp.Attributes().Get("direction"); ok {
 					switch direction.Str() {
@@ -104,6 +97,7 @@ func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 			timestamp:   timestamp,
 			doubleValue: &memUtilPct,
 		},
+		// The process rss bytes have been found to be equal to the memory usage reported by OTEL
 		metric{
 			dataType:  Sum,
 			name:      "system.process.memory.rss.bytes",
