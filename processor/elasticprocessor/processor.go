@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/ishleenk17/opentelemetry-collector-contrib/processor/elasticprocessor/internal/hostmetrics"
+	"github.com/tommyers-elastic/opentelemetry-collector-contrib/processor/elasticprocessor/internal/hostmetrics"
 
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -15,8 +15,8 @@ import (
 )
 
 type ElasticProcessor struct {
-	cfg    *Config
-	logger *zap.Logger
+	cfg     *Config
+	logger  *zap.Logger
 	storage map[string]any
 }
 
