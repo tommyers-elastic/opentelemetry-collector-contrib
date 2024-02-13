@@ -6,33 +6,67 @@ import (
 )
 
 func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
-	var timestamp, startTimestamp pcommon.Timestamp
-	var threads, memUsage, memVirtual, fdOpen, ioReadBytes, ioWriteBytes, ioReadOperations, ioWriteOperations int64
+	var timestamp pcommon.Timestamp
+	var startTime, threads, memUsage, memVirtual, fdOpen, ioReadBytes, ioWriteBytes, ioReadOperations, ioWriteOperations int64
 	var memUtil, memUtilPct, total, cpuTimeValue, systemCpuTime, userCpuTime float64
 
 	for i := 0; i < metrics.Len(); i++ {
 		metric := metrics.At(i)
 		if metric.Name() == "process.threads" {
 			dp := metric.Sum().DataPoints().At(0)
-			timestamp = dp.Timestamp()
+			if timestamp == 0 {
+				timestamp = dp.Timestamp()
+			}
+			if startTime == 0 {
+				startTime = dp.StartTimestamp().AsTime().UnixMilli()
+			}
 			threads = dp.IntValue()
 		} else if metric.Name() == "process.memory.utilization" {
 			dp := metric.Gauge().DataPoints().At(0)
+			if timestamp == 0 {
+				timestamp = dp.Timestamp()
+			}
+			if startTime == 0 {
+				startTime = dp.StartTimestamp().AsTime().UnixMilli()
+			}
 			memUtil = dp.DoubleValue()
 		} else if metric.Name() == "process.memory.usage" {
 			dp := metric.Sum().DataPoints().At(0)
+			if timestamp == 0 {
+				timestamp = dp.Timestamp()
+			}
+			if startTime == 0 {
+				startTime = dp.StartTimestamp().AsTime().UnixMilli()
+			}
 			memUsage = dp.IntValue()
 		} else if metric.Name() == "process.memory.virtual" {
 			dp := metric.Sum().DataPoints().At(0)
+			if timestamp == 0 {
+				timestamp = dp.Timestamp()
+			}
+			if startTime == 0 {
+				startTime = dp.StartTimestamp().AsTime().UnixMilli()
+			}
 			memVirtual = dp.IntValue()
 		} else if metric.Name() == "process.open_file_descriptors" {
 			dp := metric.Sum().DataPoints().At(0)
+			if timestamp == 0 {
+				timestamp = dp.Timestamp()
+			}
+			if startTime == 0 {
+				startTime = dp.StartTimestamp().AsTime().UnixMilli()
+			}
 			fdOpen = dp.IntValue()
 		} else if metric.Name() == "process.cpu.time" {
 			dataPoints := metric.Sum().DataPoints()
 			for j := 0; j < dataPoints.Len(); j++ {
 				dp := dataPoints.At(j)
-				startTimestamp = dp.StartTimestamp()
+				if timestamp == 0 {
+					timestamp = dp.Timestamp()
+				}
+				if startTime == 0 {
+					startTime = dp.StartTimestamp().AsTime().UnixMilli()
+				}
 				value := dp.DoubleValue()
 				if state, ok := dp.Attributes().Get("state"); ok {
 					switch state.Str() {
@@ -52,6 +86,12 @@ func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 			dataPoints := metric.Sum().DataPoints()
 			for j := 0; j < dataPoints.Len(); j++ {
 				dp := dataPoints.At(j)
+				if timestamp == 0 {
+					timestamp = dp.Timestamp()
+				}
+				if startTime == 0 {
+					startTime = dp.StartTimestamp().AsTime().UnixMilli()
+				}
 				value := dp.IntValue()
 				if direction, ok := dp.Attributes().Get("direction"); ok {
 					switch direction.Str() {
@@ -66,6 +106,12 @@ func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 			dataPoints := metric.Sum().DataPoints()
 			for j := 0; j < dataPoints.Len(); j++ {
 				dp := dataPoints.At(j)
+				if timestamp == 0 {
+					timestamp = dp.Timestamp()
+				}
+				if startTime == 0 {
+					startTime = dp.StartTimestamp().AsTime().UnixMilli()
+				}
 				value := dp.IntValue()
 				if direction, ok := dp.Attributes().Get("direction"); ok {
 					switch direction.Str() {
@@ -85,6 +131,12 @@ func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 	userCpuTime = userCpuTime * 1000
 
 	addMetrics(metrics, dataset,
+		metric{
+			dataType:  Sum,
+			name:      "process.cpu.start_time",
+			timestamp: timestamp,
+			intValue:  &startTime,
+		},
 		metric{
 			dataType:  Sum,
 			name:      "system.process.num_threads",
@@ -123,32 +175,28 @@ func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 			doubleValue: &memUtilPct,
 		},
 		metric{
-			dataType:       Sum,
-			name:           "system.process.cpu.total.value",
-			timestamp:      timestamp,
-			startTimestamp: startTimestamp,
-			doubleValue:    &cpuTimeValue,
+			dataType:    Sum,
+			name:        "system.process.cpu.total.value",
+			timestamp:   timestamp,
+			doubleValue: &cpuTimeValue,
 		},
 		metric{
-			dataType:       Sum,
-			name:           "system.process.cpu.system.ticks",
-			timestamp:      timestamp,
-			startTimestamp: startTimestamp,
-			doubleValue:    &systemCpuTime,
+			dataType:    Sum,
+			name:        "system.process.cpu.system.ticks",
+			timestamp:   timestamp,
+			doubleValue: &systemCpuTime,
 		},
 		metric{
-			dataType:       Sum,
-			name:           "system.process.cpu.user.ticks",
-			timestamp:      timestamp,
-			startTimestamp: startTimestamp,
-			doubleValue:    &userCpuTime,
+			dataType:    Sum,
+			name:        "system.process.cpu.user.ticks",
+			timestamp:   timestamp,
+			doubleValue: &userCpuTime,
 		},
 		metric{
-			dataType:       Sum,
-			name:           "system.process.cpu.total.ticks",
-			timestamp:      timestamp,
-			startTimestamp: startTimestamp,
-			doubleValue:    &cpuTimeValue,
+			dataType:    Sum,
+			name:        "system.process.cpu.total.ticks",
+			timestamp:   timestamp,
+			doubleValue: &cpuTimeValue,
 		},
 		metric{
 			dataType:  Sum,

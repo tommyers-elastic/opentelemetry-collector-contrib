@@ -17,8 +17,9 @@ func addMemoryMetrics(metrics pmetric.MetricSlice, dataset string) error {
 			dataPoints := metric.Sum().DataPoints()
 			for j := 0; j < dataPoints.Len(); j++ {
 				dp := dataPoints.At(j)
-
-				timestamp = dp.Timestamp()
+				if timestamp == 0 {
+					timestamp = dp.Timestamp()
+				}
 
 				value := dp.IntValue()
 				if state, ok := dp.Attributes().Get("state"); ok {
@@ -47,8 +48,11 @@ func addMemoryMetrics(metrics pmetric.MetricSlice, dataset string) error {
 			dataPoints := metric.Gauge().DataPoints()
 			for j := 0; j < dataPoints.Len(); j++ {
 				dp := dataPoints.At(j)
-				value := dp.DoubleValue()
+				if timestamp == 0 {
+					timestamp = dp.Timestamp()
+				}
 
+				value := dp.DoubleValue()
 				if state, ok := dp.Attributes().Get("state"); ok {
 					switch state.Str() {
 					case "free":

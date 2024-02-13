@@ -16,14 +16,20 @@ func addCPUMetrics(metrics pmetric.MetricSlice, dataset string) error {
 		metric := metrics.At(i)
 		if metric.Name() == "system.cpu.logical.count" {
 			dp := metric.Sum().DataPoints().At(0)
+			if timestamp == 0 {
+				timestamp = dp.Timestamp()
+			}
+
 			numCores = dp.IntValue()
-			timestamp = dp.Timestamp()
 		} else if metric.Name() == "system.cpu.utilization" {
 			dataPoints := metric.Gauge().DataPoints()
 			for j := 0; j < dataPoints.Len(); j++ {
 				dp := dataPoints.At(j)
-				value := dp.DoubleValue()
+				if timestamp == 0 {
+					timestamp = dp.Timestamp()
+				}
 
+				value := dp.DoubleValue()
 				if state, ok := dp.Attributes().Get("state"); ok {
 					switch state.Str() {
 					case "idle":
