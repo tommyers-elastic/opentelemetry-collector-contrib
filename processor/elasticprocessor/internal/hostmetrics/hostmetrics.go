@@ -16,7 +16,7 @@ var scraperToElasticDataset = map[string]string{
 	"memory":     "system.memory",
 	"network":    "system.network",
 	"paging":     "system.memory",
-	"processes":  "system.process",
+	"processes":  "system.process.summary",
 	"process":    "system.process",
 }
 
@@ -46,6 +46,10 @@ func AddElasticSystemMetrics(scopeMetrics pmetric.ScopeMetrics, storage map[stri
 		return addMemoryMetrics(scopeMetrics.Metrics(), dataset)
 	case "load":
 		return addLoadMetrics(scopeMetrics.Metrics(), dataset)
+	case "process":
+		return addProcessMetrics(scopeMetrics.Metrics(), dataset)
+	case "processes":
+		return addProcessSummaryMetrics(scopeMetrics.Metrics(), dataset)
 	default:
 		return fmt.Errorf("no matching transform function found for scope '%s'", scope.Name())
 	}

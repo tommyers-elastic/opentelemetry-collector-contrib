@@ -15,8 +15,8 @@ import (
 )
 
 type ElasticProcessor struct {
-	cfg    *Config
-	logger *zap.Logger
+	cfg     *Config
+	logger  *zap.Logger
 	storage map[string]any
 }
 
