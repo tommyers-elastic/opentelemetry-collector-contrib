@@ -7,8 +7,8 @@ import (
 
 func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 	var timestamp pcommon.Timestamp
-	var startTime, threads, memUsage, memVirtual, fdOpen, ioReadBytes, ioWriteBytes, ioReadOperations, ioWriteOperations int64
-	var memUtil, memUtilPct, total, cpuTimeValue, systemCpuTime, userCpuTime float64
+	var startTime, timeDiff, threads, memUsage, memVirtual, fdOpen, ioReadBytes, ioWriteBytes, ioReadOperations, ioWriteOperations int64
+	var memUtil, memUtilPct, total, cpuTimeValue, systemCpuTime, userCpuTime, cpuPct float64
 
 	for i := 0; i < metrics.Len(); i++ {
 		metric := metrics.At(i)
@@ -129,6 +129,8 @@ func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 	cpuTimeValue = total * 1000
 	systemCpuTime = systemCpuTime * 1000
 	userCpuTime = userCpuTime * 1000
+	timeDiff = startTime - timestamp.AsTime().UnixMilli()
+	cpuPct = cpuTimeValue / float64(timeDiff)
 
 	addMetrics(metrics, dataset,
 		metric{
@@ -221,6 +223,12 @@ func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 			name:      "system.process.io.write_ops",
 			timestamp: timestamp,
 			intValue:  &ioWriteOperations,
+		},
+		metric{
+			dataType:    Gauge,
+			name:        "system.process.cpu.total.pct",
+			timestamp:   timestamp,
+			doubleValue: &cpuPct,
 		},
 	)
 
