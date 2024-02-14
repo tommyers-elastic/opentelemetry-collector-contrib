@@ -13,13 +13,21 @@ func addLoadMetrics(metrics pmetric.MetricSlice, dataset string) error {
 		metric := metrics.At(i)
 		if metric.Name() == "system.cpu.load_average.1m" {
 			dp := metric.Gauge().DataPoints().At(0)
-			timestamp = dp.Timestamp()
+			if timestamp == 0 {
+				timestamp = dp.Timestamp()
+			}
 			l1 = dp.DoubleValue()
 		} else if metric.Name() == "system.cpu.load_average.5m" {
 			dp := metric.Gauge().DataPoints().At(0)
+			if timestamp == 0 {
+				timestamp = dp.Timestamp()
+			}
 			l5 = dp.DoubleValue()
 		} else if metric.Name() == "system.cpu.load_average.15m" {
 			dp := metric.Gauge().DataPoints().At(0)
+			if timestamp == 0 {
+				timestamp = dp.Timestamp()
+			}
 			l15 = dp.DoubleValue()
 		}
 	}

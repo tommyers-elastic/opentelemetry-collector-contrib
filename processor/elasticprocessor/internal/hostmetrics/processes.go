@@ -17,7 +17,9 @@ func addProcessSummaryMetrics(metrics pmetric.MetricSlice, dataset string) error
 			// iterate over the datapoints corresponding to different 'status' attributes
 			for j := 0; j < dataPoints.Len(); j++ {
 				dp := dataPoints.At(j)
-				timestamp = dp.Timestamp()
+				if timestamp == 0 {
+					timestamp = dp.Timestamp()
+				}
 				value := dp.IntValue()
 				if status, ok := dp.Attributes().Get("status"); ok {
 					switch status.Str() {
