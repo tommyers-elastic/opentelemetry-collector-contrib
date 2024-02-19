@@ -47,6 +47,8 @@ func AddElasticSystemMetrics(scopeMetrics pmetric.ScopeMetrics, storage map[stri
 	case "load":
 		return addLoadMetrics(scopeMetrics.Metrics(), dataset)
 	case "process":
+		process_ppid, _ := scopeMetrics.Scope().Attributes().Get("process.parent_pid")
+		scopeMetrics.Scope().Attributes().PutInt("ishleen_test_ppid", process_ppid.Int())
 		return addProcessMetrics(scopeMetrics.Metrics(), dataset)
 	case "processes":
 		return addProcessSummaryMetrics(scopeMetrics.Metrics(), dataset)
