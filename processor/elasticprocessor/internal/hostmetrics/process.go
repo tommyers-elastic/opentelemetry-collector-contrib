@@ -5,7 +5,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 )
 
-func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
+func addProcessMetrics(metrics pmetric.MetricSlice, rm pcommon.Resource, dataset string) error {
 	var timestamp pcommon.Timestamp
 	var startTime, timeDiff, threads, memUsage, memVirtual, fdOpen, ioReadBytes, ioWriteBytes, ioReadOperations, ioWriteOperations int64
 	var memUtil, memUtilPct, total, cpuTimeValue, systemCpuTime, userCpuTime, cpuPct float64
@@ -129,10 +129,10 @@ func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 	cpuTimeValue = total * 1000
 	systemCpuTime = systemCpuTime * 1000
 	userCpuTime = userCpuTime * 1000
-	timeDiff = startTime - timestamp.AsTime().UnixMilli()
+	timeDiff = timestamp.AsTime().UnixMilli() - startTime
 	cpuPct = cpuTimeValue / float64(timeDiff)
 
-	addMetrics(metrics, dataset,
+	addMetrics(metrics, rm, dataset,
 		metric{
 			dataType:  Sum,
 			name:      "process.cpu.start_time",

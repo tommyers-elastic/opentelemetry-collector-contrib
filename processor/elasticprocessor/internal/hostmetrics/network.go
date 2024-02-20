@@ -5,7 +5,7 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 )
 
-func addNetworkMetrics(metrics pmetric.MetricSlice, dataset string) error {
+func addNetworkMetrics(metrics pmetric.MetricSlice, rm pcommon.Resource, dataset string) error {
 	var timestamp pcommon.Timestamp
 	//var networkName string
 	var inBytes, outBytes int64
@@ -18,7 +18,7 @@ func addNetworkMetrics(metrics pmetric.MetricSlice, dataset string) error {
 			for j := 0; j < dataPoints.Len(); j++ {
 				dp := dataPoints.At(j)
 				timestamp = dp.Timestamp()
-				//	networkName = dp.Attributes().Get("device")
+				//networkName, _ := dp.Attributes().Get("device")
 				value := dp.IntValue()
 				if direction, ok := dp.Attributes().Get("direction"); ok {
 					switch direction.Str() {
@@ -32,7 +32,7 @@ func addNetworkMetrics(metrics pmetric.MetricSlice, dataset string) error {
 		}
 	}
 
-	addMetrics(metrics, dataset,
+	addMetrics(metrics, rm, dataset,
 		metric{
 			dataType:  Sum,
 			name:      "system.network.in.bytes",
