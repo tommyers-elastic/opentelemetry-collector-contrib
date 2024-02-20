@@ -27,6 +27,13 @@ func newProcessor(set processor.CreateSettings, cfg *Config) *ElasticProcessor {
 func (p *ElasticProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	for i := 0; i < md.ResourceMetrics().Len(); i++ {
 		resourceMetric := md.ResourceMetrics().At(i)
+		host_name, _ := resourceMetric.Resource().Attributes().Get("host.name")
+		resourceMetric.Resource().Attributes().PutStr("ishleen_host.name", host_name.Str())
+
+		process_ppid, _ := resourceMetric.Resource().Attributes().Get("process.parent_pid")
+		if process_ppid.Int() != 0 {
+			resourceMetric.Resource().Attributes().PutInt("ishleen_ppid_ra", process_ppid.Int())
+		}
 
 		for j := 0; j < resourceMetric.ScopeMetrics().Len(); j++ {
 			scopeMetric := resourceMetric.ScopeMetrics().At(j)
