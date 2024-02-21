@@ -51,8 +51,6 @@ func AddElasticSystemMetrics(scopeMetrics pmetric.ScopeMetrics, rm pcommon.Resou
 		return addProcessMetrics(scopeMetrics.Metrics(), rm, dataset)
 	case "processes":
 		return addProcessSummaryMetrics(scopeMetrics.Metrics(), rm, dataset)
-	case "network":
-		return addNetworkMetrics(scopeMetrics.Metrics(), rm, dataset)
 	default:
 		return fmt.Errorf("no matching transform function found for scope '%s'", scope.Name())
 	}
