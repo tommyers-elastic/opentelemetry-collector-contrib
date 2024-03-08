@@ -47,21 +47,8 @@ func addMetrics(ms pmetric.MetricSlice, resource pcommon.Resource, dataset strin
 			dp.SetStartTimestamp(metric.startTimestamp)
 		}
 
-		process_ppid, _ := resource.Attributes().Get("process.parent_pid")
-		if process_ppid.Int() != 0 {
-			dp.Attributes().PutInt("process.parent.pid", process_ppid.Int())
-		}
-		process_owner, _ := resource.Attributes().Get("process.owner")
-		if process_owner.Str() != "" {
-			dp.Attributes().PutStr("user.name", process_owner.Str())
-		}
-		process_executable, _ := resource.Attributes().Get("process.executable.path")
-		if process_executable.Str() != "" {
-			dp.Attributes().PutStr("process.executable", process_executable.Str())
-		}
-		process_name, _ := resource.Attributes().Get("process.executable.name")
-		if process_name.Str() != "" {
-			dp.Attributes().PutStr("process.name", process_name.Str())
+		if dataset == "system.process" {
+			addProcessAttributes(resource, dp)
 		}
 
 		dp.Attributes().PutStr("data_stream.dataset", dataset)
