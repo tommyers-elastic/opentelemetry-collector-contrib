@@ -27,13 +27,14 @@ func newProcessor(set processor.CreateSettings, cfg *Config) *ElasticProcessor {
 func (p *ElasticProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
 	for i := 0; i < md.ResourceMetrics().Len(); i++ {
 		resourceMetric := md.ResourceMetrics().At(i)
+		rm := resourceMetric.Resource()
 
 		for j := 0; j < resourceMetric.ScopeMetrics().Len(); j++ {
 			scopeMetric := resourceMetric.ScopeMetrics().At(j)
 
 			if p.cfg.AddSystemMetrics {
 				if strings.HasPrefix(scopeMetric.Scope().Name(), "otelcol/hostmetricsreceiver") {
-					if err := hostmetrics.AddElasticSystemMetrics(scopeMetric, p.storage); err != nil {
+					if err := hostmetrics.AddElasticSystemMetrics(scopeMetric, rm, p.storage); err != nil {
 						p.logger.Error("error adding hostmetrics data", zap.Error(err))
 					}
 				}

@@ -21,7 +21,7 @@ type metric struct {
 	doubleValue    *float64
 }
 
-func addMetrics(ms pmetric.MetricSlice, dataset string, metrics ...metric) {
+func addMetrics(ms pmetric.MetricSlice, resource pcommon.Resource, dataset string, metrics ...metric) {
 	ms.EnsureCapacity(ms.Len() + len(metrics))
 
 	for _, metric := range metrics {
@@ -45,6 +45,10 @@ func addMetrics(ms pmetric.MetricSlice, dataset string, metrics ...metric) {
 		dp.SetTimestamp(metric.timestamp)
 		if metric.startTimestamp != 0 {
 			dp.SetStartTimestamp(metric.startTimestamp)
+		}
+
+		if dataset == "system.process" {
+			addProcessAttributes(resource, dp)
 		}
 
 		dp.Attributes().PutStr("data_stream.dataset", dataset)

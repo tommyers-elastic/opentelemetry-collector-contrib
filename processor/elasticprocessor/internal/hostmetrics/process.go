@@ -5,10 +5,10 @@ import (
 	"go.opentelemetry.io/collector/pdata/pmetric"
 )
 
-func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
+func addProcessMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, dataset string) error {
 	var timestamp pcommon.Timestamp
-	var startTime, threads, memUsage, memVirtual, fdOpen, ioReadBytes, ioWriteBytes, ioReadOperations, ioWriteOperations int64
-	var memUtil, memUtilPct, total, cpuTimeValue, systemCpuTime, userCpuTime float64
+	var startTime, processRuntime, threads, memUsage, memVirtual, fdOpen, ioReadBytes, ioWriteBytes, ioReadOperations, ioWriteOperations int64
+	var memUtil, memUtilPct, total, cpuTimeValue, systemCpuTime, userCpuTime, cpuPct float64
 
 	for i := 0; i < metrics.Len(); i++ {
 		metric := metrics.At(i)
@@ -129,8 +129,10 @@ func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 	cpuTimeValue = total * 1000
 	systemCpuTime = systemCpuTime * 1000
 	userCpuTime = userCpuTime * 1000
+	processRuntime = timestamp.AsTime().UnixMilli() - startTime
+	cpuPct = cpuTimeValue / float64(processRuntime)
 
-	addMetrics(metrics, dataset,
+	addMetrics(metrics, resource, dataset,
 		metric{
 			dataType:  Sum,
 			name:      "process.cpu.start_time",
@@ -222,7 +224,32 @@ func addProcessMetrics(metrics pmetric.MetricSlice, dataset string) error {
 			timestamp: timestamp,
 			intValue:  &ioWriteOperations,
 		},
+		metric{
+			dataType:    Gauge,
+			name:        "system.process.cpu.total.pct",
+			timestamp:   timestamp,
+			doubleValue: &cpuPct,
+		},
 	)
 
 	return nil
+}
+
+func addProcessAttributes(resource pcommon.Resource, dp pmetric.NumberDataPoint) {
+	process_ppid, _ := resource.Attributes().Get("process.parent_pid")
+	if process_ppid.Int() != 0 {
+		dp.Attributes().PutInt("process.parent.pid", process_ppid.Int())
+	}
+	process_owner, _ := resource.Attributes().Get("process.owner")
+	if process_owner.Str() != "" {
+		dp.Attributes().PutStr("user.name", process_owner.Str())
+	}
+	process_executable, _ := resource.Attributes().Get("process.executable.path")
+	if process_executable.Str() != "" {
+		dp.Attributes().PutStr("process.executable", process_executable.Str())
+	}
+	process_name, _ := resource.Attributes().Get("process.executable.name")
+	if process_name.Str() != "" {
+		dp.Attributes().PutStr("process.name", process_name.Str())
+	}
 }
