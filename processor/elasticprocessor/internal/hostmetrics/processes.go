@@ -8,6 +8,7 @@ import (
 func addProcessSummaryMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, dataset string) error {
 	var timestamp pcommon.Timestamp
 	var idleProcesses, sleepingProcesses, stoppedProcesses, zombieProcesses, totalProcesses int64
+	var dp1 pmetric.NumberDataPoint
 
 	// iterate all metrics in the current scope and generate the additional Elastic system integration metrics
 	for i := 0; i < metrics.Len(); i++ {
@@ -42,7 +43,7 @@ func addProcessSummaryMetrics(metrics pmetric.MetricSlice, resource pcommon.Reso
 
 	}
 
-	addMetrics(metrics, resource, dataset,
+	addMetrics(metrics, resource, dataset, dp1,
 		metric{
 			dataType:  Sum,
 			name:      "system.process.summary.idle",

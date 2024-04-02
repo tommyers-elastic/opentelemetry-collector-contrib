@@ -9,6 +9,7 @@ func addProcessMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, d
 	var timestamp pcommon.Timestamp
 	var startTime, processRuntime, threads, memUsage, memVirtual, fdOpen, ioReadBytes, ioWriteBytes, ioReadOperations, ioWriteOperations int64
 	var memUtil, memUtilPct, total, cpuTimeValue, systemCpuTime, userCpuTime, cpuPct float64
+	var dp1 pmetric.NumberDataPoint
 
 	for i := 0; i < metrics.Len(); i++ {
 		metric := metrics.At(i)
@@ -132,7 +133,7 @@ func addProcessMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, d
 	processRuntime = timestamp.AsTime().UnixMilli() - startTime
 	cpuPct = cpuTimeValue / float64(processRuntime)
 
-	addMetrics(metrics, resource, dataset,
+	addMetrics(metrics, resource, dataset, dp1,
 		metric{
 			dataType:  Sum,
 			name:      "process.cpu.start_time",
@@ -151,7 +152,7 @@ func addProcessMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, d
 			timestamp:   timestamp,
 			doubleValue: &memUtilPct,
 		},
-		// The process rss bytes have been found to be equal to the memory usage reported by OTEL
+		// The pocess rss bytes have been found to be equal to the memory usage reported by OTEL
 		metric{
 			dataType:  Sum,
 			name:      "system.process.memory.rss.bytes",

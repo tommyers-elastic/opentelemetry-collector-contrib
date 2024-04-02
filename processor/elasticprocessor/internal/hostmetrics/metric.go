@@ -21,7 +21,7 @@ type metric struct {
 	doubleValue    *float64
 }
 
-func addMetrics(ms pmetric.MetricSlice, resource pcommon.Resource, dataset string, metrics ...metric) {
+func addMetrics(ms pmetric.MetricSlice, resource pcommon.Resource, dataset string, oteldp pmetric.NumberDataPoint, metrics ...metric) {
 	ms.EnsureCapacity(ms.Len() + len(metrics))
 
 	for _, metric := range metrics {
@@ -49,6 +49,11 @@ func addMetrics(ms pmetric.MetricSlice, resource pcommon.Resource, dataset strin
 
 		if dataset == "system.process" {
 			addProcessAttributes(resource, dp)
+		}
+		if dataset == "system.network" {
+			if networkName, ok := oteldp.Attributes().Get("device"); ok {
+				dp.Attributes().PutStr("system.network.name", networkName.Str())
+			}
 		}
 
 		dp.Attributes().PutStr("data_stream.dataset", dataset)

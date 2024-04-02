@@ -9,6 +9,7 @@ func addMemoryMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, da
 	var timestamp pcommon.Timestamp
 	var total, free, cached, usedBytes, actualFree, actualUsedBytes int64
 	var usedPercent, actualUsedPercent float64
+	var dp1 pmetric.NumberDataPoint
 
 	// iterate all metrics in the current scope and generate the additional Elastic system integration metrics
 	for i := 0; i < metrics.Len(); i++ {
@@ -74,7 +75,7 @@ func addMemoryMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, da
 	usedBytes += total
 	actualFree = total - actualUsedBytes
 
-	addMetrics(metrics, resource, dataset,
+	addMetrics(metrics, resource, dataset, dp1,
 		metric{
 			dataType:  Sum,
 			name:      "system.memory.total",
