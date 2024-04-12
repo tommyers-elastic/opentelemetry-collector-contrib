@@ -147,3 +147,9 @@ func addNetworkMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, d
 	}
 	return nil
 }
+
+func addNetworkDatapointAttributes(oteldp pmetric.NumberDataPoint, newdp pmetric.NumberDataPoint) {
+	if networkName, ok := oteldp.Attributes().Get("device"); ok {
+		newdp.Attributes().PutStr("system.network.name", networkName.Str())
+	}
+}

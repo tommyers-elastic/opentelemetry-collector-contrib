@@ -48,12 +48,13 @@ func addMetrics(ms pmetric.MetricSlice, resource pcommon.Resource, dataset strin
 		}
 
 		if dataset == "system.process" {
+			// Add resource attribute as an attribute to each datapoint
 			addProcessAttributes(resource, dp)
 		}
 		if dataset == "system.network" {
-			if networkName, ok := oteldp.Attributes().Get("device"); ok {
-				dp.Attributes().PutStr("system.network.name", networkName.Str())
-			}
+			// Add the network name as an attribute to each datapoint being generated
+			addNetworkDatapointAttributes(oteldp, dp)
+
 		}
 
 		dp.Attributes().PutStr("data_stream.dataset", dataset)
