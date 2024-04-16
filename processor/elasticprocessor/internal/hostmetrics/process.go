@@ -9,7 +9,6 @@ func addProcessMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, d
 	var timestamp pcommon.Timestamp
 	var startTime, processRuntime, threads, memUsage, memVirtual, fdOpen, ioReadBytes, ioWriteBytes, ioReadOperations, ioWriteOperations int64
 	var memUtil, memUtilPct, total, cpuTimeValue, systemCpuTime, userCpuTime, cpuPct float64
-	var dp1 pmetric.NumberDataPoint
 
 	for i := 0; i < metrics.Len(); i++ {
 		metric := metrics.At(i)
@@ -133,7 +132,7 @@ func addProcessMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, d
 	processRuntime = timestamp.AsTime().UnixMilli() - startTime
 	cpuPct = cpuTimeValue / float64(processRuntime)
 
-	addMetrics(metrics, resource, dataset, dp1,
+	addMetrics(metrics, resource, dataset,
 		metric{
 			dataType:  Sum,
 			name:      "process.cpu.start_time",

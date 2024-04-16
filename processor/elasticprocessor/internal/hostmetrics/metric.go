@@ -19,9 +19,10 @@ type metric struct {
 	startTimestamp pcommon.Timestamp
 	intValue       *int64
 	doubleValue    *float64
+	attributes     *pcommon.Map
 }
 
-func addMetrics(ms pmetric.MetricSlice, resource pcommon.Resource, dataset string, oteldp pmetric.NumberDataPoint, metrics ...metric) {
+func addMetrics(ms pmetric.MetricSlice, resource pcommon.Resource, dataset string, metrics ...metric) {
 	ms.EnsureCapacity(ms.Len() + len(metrics))
 
 	for _, metric := range metrics {
@@ -51,10 +52,8 @@ func addMetrics(ms pmetric.MetricSlice, resource pcommon.Resource, dataset strin
 			// Add resource attribute as an attribute to each datapoint
 			addProcessAttributes(resource, dp)
 		}
-		if dataset == "system.network" {
-			// Add the network name as an attribute to each datapoint being generated
-			addNetworkDatapointAttributes(oteldp, dp)
-
+		if metric.attributes != nil {
+			metric.attributes.CopyTo(dp.Attributes())
 		}
 
 		dp.Attributes().PutStr("data_stream.dataset", dataset)

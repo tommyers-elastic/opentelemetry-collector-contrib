@@ -8,7 +8,6 @@ import (
 func addLoadMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, dataset string) error {
 	var timestamp pcommon.Timestamp
 	var l1, l5, l15 float64
-	var dp1 pmetric.NumberDataPoint
 
 	for i := 0; i < metrics.Len(); i++ {
 		metric := metrics.At(i)
@@ -33,7 +32,7 @@ func addLoadMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, data
 		}
 	}
 
-	addMetrics(metrics, resource, dataset, dp1,
+	addMetrics(metrics, resource, dataset,
 		metric{
 			dataType:    Gauge,
 			name:        "system.load.1",

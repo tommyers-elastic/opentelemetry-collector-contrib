@@ -10,7 +10,7 @@ func addCPUMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, datas
 	var numCores int64
 	var totalPercent, idlePercent, systemPercent, userPercent, stealPercent,
 		iowaitPercent, nicePercent, irqPercent, softirqPercent float64
-	var dp1 pmetric.NumberDataPoint
+
 	// iterate all metrics in the current scope and generate the additional Elastic system integration metrics
 	for i := 0; i < metrics.Len(); i++ {
 		metric := metrics.At(i)
@@ -71,7 +71,7 @@ func addCPUMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, datas
 	irqNorm := irqPercent / float64(numCores)
 	softirqNorm := softirqPercent / float64(numCores)
 
-	addMetrics(metrics, resource, dataset, dp1,
+	addMetrics(metrics, resource, dataset,
 		metric{
 			dataType:  Sum,
 			name:      "system.cpu.cores",
