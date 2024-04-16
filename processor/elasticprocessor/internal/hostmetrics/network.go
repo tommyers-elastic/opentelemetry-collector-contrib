@@ -51,95 +51,94 @@ func addNetworkMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, d
 					}
 				}
 			}
+		} else if metric.Name() == "system.network.packets" {
+			dataPoints := metric.Sum().DataPoints()
+			for j := 0; j < dataPoints.Len(); j++ {
+				dp := dataPoints.At(j)
+				if timestamp == 0 {
+					timestamp = dp.Timestamp()
+				}
+				value := dp.IntValue()
+
+				var device string
+				if d, ok := dp.Attributes().Get("device"); ok {
+					device = d.Str()
+				} else {
+					continue
+				}
+
+				if _, ok := metricsByDevice[device]; !ok {
+					metricsByDevice[device] = &deviceMetrics{}
+				}
+
+				if direction, ok := dp.Attributes().Get("direction"); ok {
+					switch direction.Str() {
+					case "receive":
+						metricsByDevice[device].inPackets = value
+					case "transmit":
+						metricsByDevice[device].outPackets = value
+					}
+				}
+			}
+		} else if metric.Name() == "system.network.dropped" {
+			dataPoints := metric.Sum().DataPoints()
+			for j := 0; j < dataPoints.Len(); j++ {
+				dp := dataPoints.At(j)
+				if timestamp == 0 {
+					timestamp = dp.Timestamp()
+				}
+				value := dp.IntValue()
+
+				var device string
+				if d, ok := dp.Attributes().Get("device"); ok {
+					device = d.Str()
+				} else {
+					continue
+				}
+
+				if _, ok := metricsByDevice[device]; !ok {
+					metricsByDevice[device] = &deviceMetrics{}
+				}
+
+				if direction, ok := dp.Attributes().Get("direction"); ok {
+					switch direction.Str() {
+					case "receive":
+						metricsByDevice[device].inDropped = value
+					case "transmit":
+						metricsByDevice[device].outDropped = value
+					}
+				}
+			}
+		} else if metric.Name() == "system.network.errors" {
+			dataPoints := metric.Sum().DataPoints()
+			for j := 0; j < dataPoints.Len(); j++ {
+				dp := dataPoints.At(j)
+				if timestamp == 0 {
+					timestamp = dp.Timestamp()
+				}
+				value := dp.IntValue()
+
+				var device string
+				if d, ok := dp.Attributes().Get("device"); ok {
+					device = d.Str()
+				} else {
+					continue
+				}
+
+				if _, ok := metricsByDevice[device]; !ok {
+					metricsByDevice[device] = &deviceMetrics{}
+				}
+
+				if direction, ok := dp.Attributes().Get("direction"); ok {
+					switch direction.Str() {
+					case "receive":
+						metricsByDevice[device].inErrors = value
+					case "transmit":
+						metricsByDevice[device].outErrors = value
+					}
+				}
+			}
 		}
-		// } else if metric.Name() == "system.network.packets" {
-		// 	dataPoints := metric.Sum().DataPoints()
-		// 	for j := 0; j < dataPoints.Len(); j++ {
-		// 		dp := dataPoints.At(j)
-		// 		if timestamp == 0 {
-		// 			timestamp = dp.Timestamp()
-		// 		}
-		// 		value := dp.IntValue()
-
-		// 		var device string
-		// 		if d, ok := dp.Attributes().Get("device"); ok {
-		// 			device = d.Str()
-		// 		} else {
-		// 			continue
-		// 		}
-
-		// 		if _, ok := metricsByDevice[device]; !ok {
-		// 			metricsByDevice[device] = &deviceMetrics{}
-		// 		}
-
-		// 		if direction, ok := dp.Attributes().Get("direction"); ok {
-		// 			switch direction.Str() {
-		// 			case "receive":
-		// 				metricsByDevice[device].inPackets = value
-		// 			case "transmit":
-		// 				metricsByDevice[device].outPackets = value
-		// 			}
-		// 		}
-		// 	}
-		// } else if metric.Name() == "system.network.dropped" {
-		// 	dataPoints := metric.Sum().DataPoints()
-		// 	for j := 0; j < dataPoints.Len(); j++ {
-		// 		dp := dataPoints.At(j)
-		// 		if timestamp == 0 {
-		// 			timestamp = dp.Timestamp()
-		// 		}
-		// 		value := dp.IntValue()
-
-		// 		var device string
-		// 		if d, ok := dp.Attributes().Get("device"); ok {
-		// 			device = d.Str()
-		// 		} else {
-		// 			continue
-		// 		}
-
-		// 		if _, ok := metricsByDevice[device]; !ok {
-		// 			metricsByDevice[device] = &deviceMetrics{}
-		// 		}
-
-		// 		if direction, ok := dp.Attributes().Get("direction"); ok {
-		// 			switch direction.Str() {
-		// 			case "receive":
-		// 				metricsByDevice[device].inDropped = value
-		// 			case "transmit":
-		// 				metricsByDevice[device].outDropped = value
-		// 			}
-		// 		}
-		// 	}
-		// } else if metric.Name() == "system.network.errors" {
-		// 	dataPoints := metric.Sum().DataPoints()
-		// 	for j := 0; j < dataPoints.Len(); j++ {
-		// 		dp := dataPoints.At(j)
-		// 		if timestamp == 0 {
-		// 			timestamp = dp.Timestamp()
-		// 		}
-		// 		value := dp.IntValue()
-
-		// 		var device string
-		// 		if d, ok := dp.Attributes().Get("device"); ok {
-		// 			device = d.Str()
-		// 		} else {
-		// 			continue
-		// 		}
-
-		// 		if _, ok := metricsByDevice[device]; !ok {
-		// 			metricsByDevice[device] = &deviceMetrics{}
-		// 		}
-
-		// 		if direction, ok := dp.Attributes().Get("direction"); ok {
-		// 			switch direction.Str() {
-		// 			case "receive":
-		// 				metricsByDevice[device].inErrors = value
-		// 			case "transmit":
-		// 				metricsByDevice[device].outErrors = value
-		// 			}
-		// 		}
-		// 	}
-		// }
 	}
 
 	for device, deviceMetrics := range metricsByDevice {
@@ -161,48 +160,48 @@ func addNetworkMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, d
 				intValue:   &deviceMetrics.outBytes,
 				attributes: &attributes,
 			},
-			// metric{
-			// 	dataType:   Sum,
-			// 	name:       "system.network.in.packets",
-			// 	timestamp:  timestamp,
-			// 	intValue:   &deviceMetrics.inPackets,
-			// 	attributes: &attributes,
-			// },
-			// metric{
-			// 	dataType:   Sum,
-			// 	name:       "system.network.out.packets",
-			// 	timestamp:  timestamp,
-			// 	intValue:   &deviceMetrics.outPackets,
-			// 	attributes: &attributes,
-			// },
-			// metric{
-			// 	dataType:   Sum,
-			// 	name:       "system.network.in.dropped",
-			// 	timestamp:  timestamp,
-			// 	intValue:   &deviceMetrics.inDropped,
-			// 	attributes: &attributes,
-			// },
-			// metric{
-			// 	dataType:   Sum,
-			// 	name:       "system.network.out.dropped",
-			// 	timestamp:  timestamp,
-			// 	intValue:   &deviceMetrics.outDropped,
-			// 	attributes: &attributes,
-			// },
-			// metric{
-			// 	dataType:   Sum,
-			// 	name:       "system.network.in.errors",
-			// 	timestamp:  timestamp,
-			// 	intValue:   &deviceMetrics.inErrors,
-			// 	attributes: &attributes,
-			// },
-			// metric{
-			// 	dataType:   Sum,
-			// 	name:       "system.network.out.errors",
-			// 	timestamp:  timestamp,
-			// 	intValue:   &deviceMetrics.outErrors,
-			// 	attributes: &attributes,
-			// },
+			metric{
+				dataType:   Sum,
+				name:       "system.network.in.packets",
+				timestamp:  timestamp,
+				intValue:   &deviceMetrics.inPackets,
+				attributes: &attributes,
+			},
+			metric{
+				dataType:   Sum,
+				name:       "system.network.out.packets",
+				timestamp:  timestamp,
+				intValue:   &deviceMetrics.outPackets,
+				attributes: &attributes,
+			},
+			metric{
+				dataType:   Sum,
+				name:       "system.network.in.dropped",
+				timestamp:  timestamp,
+				intValue:   &deviceMetrics.inDropped,
+				attributes: &attributes,
+			},
+			metric{
+				dataType:   Sum,
+				name:       "system.network.out.dropped",
+				timestamp:  timestamp,
+				intValue:   &deviceMetrics.outDropped,
+				attributes: &attributes,
+			},
+			metric{
+				dataType:   Sum,
+				name:       "system.network.in.errors",
+				timestamp:  timestamp,
+				intValue:   &deviceMetrics.inErrors,
+				attributes: &attributes,
+			},
+			metric{
+				dataType:   Sum,
+				name:       "system.network.out.errors",
+				timestamp:  timestamp,
+				intValue:   &deviceMetrics.outErrors,
+				attributes: &attributes,
+			},
 		)
 	}
 
