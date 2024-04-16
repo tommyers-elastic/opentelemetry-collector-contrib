@@ -52,10 +52,10 @@ func addMetrics(ms pmetric.MetricSlice, resource pcommon.Resource, dataset strin
 			addProcessAttributes(resource, dp)
 		}
 
-		dp.Attributes().PutStr("data_stream.dataset", dataset)
-
 		if metric.attributes != nil {
 			metric.attributes.CopyTo(dp.Attributes())
 		}
+		
+		dp.Attributes().PutStr("data_stream.dataset", dataset)
 	}
 }
