@@ -19,7 +19,7 @@ type metric struct {
 	startTimestamp pcommon.Timestamp
 	intValue       *int64
 	doubleValue    *float64
-	attributes 	   *pcommon.Map
+	attributes     *pcommon.Map
 }
 
 func addMetrics(ms pmetric.MetricSlice, resource pcommon.Resource, dataset string, metrics ...metric) {
@@ -55,7 +55,7 @@ func addMetrics(ms pmetric.MetricSlice, resource pcommon.Resource, dataset strin
 		if metric.attributes != nil {
 			metric.attributes.CopyTo(dp.Attributes())
 		}
-		
+
 		dp.Attributes().PutStr("data_stream.dataset", dataset)
 	}
 }

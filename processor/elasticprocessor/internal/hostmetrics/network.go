@@ -31,7 +31,7 @@ func addNetworkMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, d
 				} else {
 					continue
 				}
-				
+
 				if _, ok := metricsByDevice[device]; !ok {
 					metricsByDevice[device] = &deviceMetrics{}
 				}
@@ -54,20 +54,20 @@ func addNetworkMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, d
 	for device, deviceMetrics := range metricsByDevice {
 		attributes := pcommon.NewMap()
 		attributes.PutStr("system.network.name", device)
-		
+
 		addMetrics(metrics, resource, dataset,
 			metric{
-				dataType:  Gauge,
-				name:      "system.network.in.bytes",
-				timestamp: timestamp,
-				intValue:  &deviceMetrics.inBytes,
+				dataType:   Gauge,
+				name:       "system.network.in.bytes",
+				timestamp:  timestamp,
+				intValue:   &deviceMetrics.inBytes,
 				attributes: &attributes,
 			},
 			metric{
-				dataType:  Gauge,
-				name:      "system.network.out.bytes",
-				timestamp: timestamp,
-				intValue:  &deviceMetrics.outBytes,
+				dataType:   Gauge,
+				name:       "system.network.out.bytes",
+				timestamp:  timestamp,
+				intValue:   &deviceMetrics.outBytes,
 				attributes: &attributes,
 			})
 	}
