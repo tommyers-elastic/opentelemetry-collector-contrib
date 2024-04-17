@@ -151,7 +151,7 @@ func addProcessMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, d
 			timestamp:   timestamp,
 			doubleValue: &memUtilPct,
 		},
-		// The pocess rss bytes have been found to be equal to the memory usage reported by OTEL
+		// The process rss bytes have been found to be equal to the memory usage reported by OTEL
 		metric{
 			dataType:  Sum,
 			name:      "system.process.memory.rss.bytes",
