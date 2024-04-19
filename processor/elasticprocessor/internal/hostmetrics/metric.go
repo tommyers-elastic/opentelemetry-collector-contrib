@@ -19,6 +19,7 @@ type metric struct {
 	startTimestamp pcommon.Timestamp
 	intValue       *int64
 	doubleValue    *float64
+	attributes     *pcommon.Map
 }
 
 func addMetrics(ms pmetric.MetricSlice, resource pcommon.Resource, dataset string, metrics ...metric) {
@@ -47,7 +48,11 @@ func addMetrics(ms pmetric.MetricSlice, resource pcommon.Resource, dataset strin
 			dp.SetStartTimestamp(metric.startTimestamp)
 		}
 
+		if metric.attributes != nil {
+			metric.attributes.CopyTo(dp.Attributes())
+		}
 		if dataset == "system.process" {
+			// Add resource attribute as an attribute to each datapoint
 			addProcessAttributes(resource, dp)
 		}
 
