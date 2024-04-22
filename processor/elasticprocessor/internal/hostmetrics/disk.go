@@ -93,7 +93,7 @@ func addDiskMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, data
 				} else {
 					continue
 				}
-				addDiskIntMetric(metrics, resource, dataset, metric.Name(), device, "read", timestamp, value)
+				addDiskIntMetric(metrics, resource, dataset, metric.Name(), device, "io", timestamp, value)
 
 			}
 		}
