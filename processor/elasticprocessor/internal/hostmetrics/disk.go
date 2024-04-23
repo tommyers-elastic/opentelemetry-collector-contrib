@@ -21,18 +21,11 @@ func addDiskMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, data
 				} else {
 					continue
 				}
-
 				if direction, ok := dp.Attributes().Get("direction"); ok {
 					name := metric.Name()
 					timestamp := dp.Timestamp()
 					value := dp.IntValue()
-
-					switch direction.Str() {
-					case "read":
-						addDiskIntMetric(metrics, resource, dataset, name, device, "read", timestamp, value)
-					case "write":
-						addDiskIntMetric(metrics, resource, dataset, name, device, "write", timestamp, value)
-					}
+					addDiskIntMetric(metrics, resource, dataset, name, device, direction.Str(), timestamp, value)
 				}
 			}
 		} else if metric.Name() == "system.disk.operation_time" {
@@ -94,7 +87,6 @@ func addDiskMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, data
 					continue
 				}
 				addDiskIntMetric(metrics, resource, dataset, metric.Name(), device, "io", timestamp, value)
-
 			}
 		}
 	}
@@ -132,7 +124,7 @@ func addDiskDoubleMetric(metrics pmetric.MetricSlice, resource pcommon.Resource,
 
 	metricsToAdd := map[string]string{
 		"system.disk.operation_time": "system.diskio.%s.time",
-		"system.disk.io_time":        "system.disk.%s.time",
+		"system.disk.io_time":        "system.diskio.%s.time",
 	}
 
 	if metricNetworkES, ok := metricsToAdd[name]; ok {
