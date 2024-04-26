@@ -156,9 +156,9 @@ func addDiskMetric[T interface {
 	metricsToAdd := map[string]string{
 		"system.disk.io":                 "system.diskio.%s.bytes",
 		"system.disk.operations":         "system.diskio.%s.count",
-		"system.disk.pending_operations": "system.diskio.io.ops",
+		"system.disk.pending_operations": "system.diskio.io.%sops",
 		"system.disk.operation_time":     "system.diskio.%s.time",
-		"system.disk.io_time":            "system.disk.io.time",
+		"system.disk.io_time":            "system.diskio.io.%stime",
 	}
 
 	if metricNetworkES, ok := metricsToAdd[name]; ok {
