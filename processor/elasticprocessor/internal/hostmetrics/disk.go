@@ -5,6 +5,7 @@ import (
 
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+	"golang.org/x/exp/constraints"
 )
 
 func addDiskMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, dataset string) error {
@@ -21,11 +22,13 @@ func addDiskMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, data
 				} else {
 					continue
 				}
+				var multiplier int64 = 1
 				if direction, ok := dp.Attributes().Get("direction"); ok {
 					name := metric.Name()
 					timestamp := dp.Timestamp()
 					value := dp.IntValue()
-					addDiskIntMetric(metrics, resource, dataset, name, device, direction.Str(), timestamp, value)
+					//addDiskIntMetric(metrics, resource, dataset, name, device, direction.Str(), timestamp, value)
+					addDiskMetric(metrics, resource, dataset, name, device, direction.Str(), timestamp, value, multiplier)
 				}
 			}
 		} else if metric.Name() == "system.disk.operation_time" {
@@ -47,13 +50,8 @@ func addDiskMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, data
 					if name == "system.disk.operation_time" {
 						multiplier = 1000
 					}
-
-					switch direction.Str() {
-					case "read":
-						addDiskDoubleMetric(metrics, resource, dataset, name, device, "read", timestamp, value, multiplier)
-					case "write":
-						addDiskDoubleMetric(metrics, resource, dataset, name, device, "write", timestamp, value, multiplier)
-					}
+					//addDiskDoubleMetric(metrics, resource, dataset, name, device, direction.Str(), timestamp, value, multiplier)
+					addDiskMetric(metrics, resource, dataset, name, device, direction.Str(), timestamp, value, multiplier)
 				}
 			}
 		} else if metric.Name() == "system.disk.io_time" {
@@ -71,22 +69,26 @@ func addDiskMetrics(metrics pmetric.MetricSlice, resource pcommon.Resource, data
 				} else {
 					continue
 				}
-				addDiskDoubleMetric(metrics, resource, dataset, metric.Name(), device, "io", timestamp, value, multiplier)
+				//addDiskDoubleMetric(metrics, resource, dataset, ), device, "io", timestamp, value, multiplier)
+				addDiskMetric(metrics, resource, dataset, metric.Name(), device, "", timestamp, value, multiplier)
 			}
 		} else if metric.Name() == "system.disk.pending_operations" {
-			var device string
 			dataPoints := metric.Sum().DataPoints()
 			for j := 0; j < dataPoints.Len(); j++ {
 				dp := dataPoints.At(j)
 				timestamp := dp.Timestamp()
 				value := dp.IntValue()
 
+				var device string
 				if d, ok := dp.Attributes().Get("device"); ok {
 					device = d.Str()
 				} else {
 					continue
 				}
-				addDiskIntMetric(metrics, resource, dataset, metric.Name(), device, "io", timestamp, value)
+				var multiplier int64 = 1
+
+				addDiskMetric(metrics, resource, dataset, metric.Name(), device, "", timestamp, value, multiplier)
+				//addDiskIntMetric(metrics, resource, dataset, metric.Name(), device, "io", timestamp, value)
 			}
 		}
 	}
@@ -138,6 +140,47 @@ func addDiskDoubleMetric(metrics pmetric.MetricSlice, resource pcommon.Resource,
 				name:        fmt.Sprintf(metricNetworkES, esmetricname),
 				timestamp:   timestamp,
 				doubleValue: &value,
+				attributes:  &attributes,
+			})
+	}
+}
+
+func addDiskMetric[T interface {
+	constraints.Integer | constraints.Float
+}](metrics pmetric.MetricSlice, resource pcommon.Resource,
+	dataset, name, device, direction string, timestamp pcommon.Timestamp, value, multiplier T) {
+
+	// func addDiskMetric(metrics pmetric.MetricSlice, resource pcommon.Resource,
+	// 	dataset, name, device, direction string, timestamp pcommon.Timestamp, value any, multiplier any) {
+
+	metricsToAdd := map[string]string{
+		"system.disk.io":                 "system.diskio.%s.bytes",
+		"system.disk.operations":         "system.diskio.%s.count",
+		"system.disk.pending_operations": "system.diskio.io.ops",
+		"system.disk.operation_time":     "system.diskio.%s.time",
+		"system.disk.io_time":            "system.disk.io.time",
+	}
+
+	if metricNetworkES, ok := metricsToAdd[name]; ok {
+		attributes := pcommon.NewMap()
+		attributes.PutStr("system.diskio.name", device)
+
+		var intValue int64
+		var doubleValue float64
+		scaledValue := value * multiplier
+		if i, ok := any(scaledValue).(int64); ok {
+			intValue = i
+		} else if d, ok := any(scaledValue).(float64); ok {
+			doubleValue = d
+		}
+
+		addMetrics(metrics, resource, dataset,
+			metric{
+				dataType:    Sum,
+				name:        fmt.Sprintf(metricNetworkES, direction),
+				timestamp:   timestamp,
+				intValue:    &intValue,
+				doubleValue: &doubleValue,
 				attributes:  &attributes,
 			})
 	}
