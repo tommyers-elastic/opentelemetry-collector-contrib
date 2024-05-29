@@ -27,7 +27,7 @@ type ElasticProcessor struct {
 
 func newProcessor(set processor.CreateSettings, cfg *Config) *ElasticProcessor {
 	remappers := []remapper{
-		hostmetrics.NewRemapper(set.Logger, hostmetrics.WithSystemIntegrationDataset(true)),
+		hostmetrics.NewRemapper(set.Logger, hostmetrics.WithSystemIntegrationDataset(false)),
 	}
 	return &ElasticProcessor{
 		cfg:       cfg,
