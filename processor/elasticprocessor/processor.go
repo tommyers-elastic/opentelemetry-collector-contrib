@@ -27,7 +27,7 @@ type ElasticProcessor struct {
 
 func newProcessor(set processor.CreateSettings, cfg *Config) *ElasticProcessor {
 	remappers := []remapper{
-		hostmetrics.NewRemapper(set.Logger, hostmetrics.WithSystemIntegrationDataset(false)),
+		hostmetrics.NewRemapper(set.Logger, hostmetrics.WithSystemIntegrationDataset(true)),
 	}
 	return &ElasticProcessor{
 		cfg:       cfg,
@@ -50,11 +50,12 @@ func (p *ElasticProcessor) processMetrics(_ context.Context, md pmetric.Metrics)
 				if len(p.remappers) > 0 {
 					if strings.HasPrefix(scopeMetric.Scope().Name(), "otelcol/hostmetricsreceiver") {
 						//hostmetrics.AddElasticSystemMetrics(scopeMetric, rm, p.storage)
-						p.logger.Debug("Remapping metrics", zap.String("scopeName", scopeMetric.Scope().Name()))
+						p.logger.Info("Remapping metrics", zap.String("scopeName", scopeMetric.Scope().Name()))
 						for _, r := range p.remappers {
+							p.logger.Info("Inside the Remapper")
 							r.Remap(scopeMetric, scopeMetric.Metrics(), rm)
 						}
-						p.logger.Debug("Finished remapping metrics", zap.String("scopeName", scopeMetric.Scope().Name()))
+						p.logger.Info("Finished remapping metrics", zap.String("scopeName", scopeMetric.Scope().Name()))
 					}
 
 				}
