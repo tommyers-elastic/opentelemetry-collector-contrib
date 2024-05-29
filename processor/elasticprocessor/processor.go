@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/elastic/opentelemetry-lib/remappers/hostmetrics"
-	//	"github.com/tommyers-elastic/opentelemetry-collector-contrib/processor/elasticprocessor/internal/hostmetrics"
 	"go.opentelemetry.io/collector/pdata/pcommon"
 	"go.opentelemetry.io/collector/pdata/plog"
 	"go.opentelemetry.io/collector/pdata/pmetric"
@@ -14,6 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// remapper interface defines the Remap method that should be implemented by different remappers
 type remapper interface {
 	Remap(pmetric.ScopeMetrics, pmetric.MetricSlice, pcommon.Resource)
 }
@@ -37,32 +37,28 @@ func newProcessor(set processor.CreateSettings, cfg *Config) *ElasticProcessor {
 	}
 }
 
+// processMetrics processes the given metrics and applies remappers if configured.
 func (p *ElasticProcessor) processMetrics(_ context.Context, md pmetric.Metrics) (pmetric.Metrics, error) {
-	p.logger.Info("Starting to process metrics", zap.Int("resourceMetricsCount", md.ResourceMetrics().Len()))
 	for i := 0; i < md.ResourceMetrics().Len(); i++ {
 		resourceMetric := md.ResourceMetrics().At(i)
 		rm := resourceMetric.Resource()
 
 		for j := 0; j < resourceMetric.ScopeMetrics().Len(); j++ {
 			scopeMetric := resourceMetric.ScopeMetrics().At(j)
+			// Apply remappers if AddSystemMetrics is enabled in the configuration
 			if p.cfg.AddSystemMetrics {
-				p.logger.Info("Add System Metrics set to true")
 				if len(p.remappers) > 0 {
+					// Apply remappers only if the scope name has the prefix "otelcol/hostmetricsreceiver"
 					if strings.HasPrefix(scopeMetric.Scope().Name(), "otelcol/hostmetricsreceiver") {
-						//hostmetrics.AddElasticSystemMetrics(scopeMetric, rm, p.storage)
-						p.logger.Info("Remapping metrics", zap.String("scopeName", scopeMetric.Scope().Name()))
 						for _, r := range p.remappers {
-							p.logger.Info("Inside the Remapper")
 							r.Remap(scopeMetric, scopeMetric.Metrics(), rm)
 						}
-						p.logger.Info("Finished remapping metrics", zap.String("scopeName", scopeMetric.Scope().Name()))
 					}
 
 				}
 			}
 		}
 	}
-	p.logger.Info("Finished processing metrics", zap.Int("resourceMetricsCount", md.ResourceMetrics().Len()))
 	return md, nil
 }
 
