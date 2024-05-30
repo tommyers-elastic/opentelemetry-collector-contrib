@@ -2,7 +2,6 @@ package elasticprocessor
 
 import (
 	"context"
-	"strings"
 
 	"github.com/elastic/opentelemetry-lib/remappers/hostmetrics"
 	"go.opentelemetry.io/collector/pdata/pcommon"
@@ -26,8 +25,12 @@ type ElasticProcessor struct {
 }
 
 func newProcessor(set processor.CreateSettings, cfg *Config) *ElasticProcessor {
-	remappers := []remapper{
-		hostmetrics.NewRemapper(set.Logger, hostmetrics.WithSystemIntegrationDataset(true)),
+	var remappers []remapper
+	// Initialize the remapper slice if AddSystemMetrics is enabled
+	if cfg.AddSystemMetrics {
+		remappers = []remapper{
+			hostmetrics.NewRemapper(set.Logger, hostmetrics.WithSystemIntegrationDataset(true)),
+		}
 	}
 	return &ElasticProcessor{
 		cfg:       cfg,
@@ -45,17 +48,8 @@ func (p *ElasticProcessor) processMetrics(_ context.Context, md pmetric.Metrics)
 
 		for j := 0; j < resourceMetric.ScopeMetrics().Len(); j++ {
 			scopeMetric := resourceMetric.ScopeMetrics().At(j)
-			// Apply remappers if AddSystemMetrics is enabled in the configuration
-			if p.cfg.AddSystemMetrics {
-				if len(p.remappers) > 0 {
-					// Apply remappers only if the scope name has the prefix "otelcol/hostmetricsreceiver"
-					if strings.HasPrefix(scopeMetric.Scope().Name(), "otelcol/hostmetricsreceiver") {
-						for _, r := range p.remappers {
-							r.Remap(scopeMetric, scopeMetric.Metrics(), rm)
-						}
-					}
-
-				}
+			for _, r := range p.remappers {
+				r.Remap(scopeMetric, scopeMetric.Metrics(), rm)
 			}
 		}
 	}
