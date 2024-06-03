@@ -20,7 +20,6 @@ type remapper interface {
 type ElasticProcessor struct {
 	cfg       *Config
 	logger    *zap.Logger
-	storage   map[string]any
 	remappers []remapper
 }
 
@@ -35,7 +34,6 @@ func newProcessor(set processor.CreateSettings, cfg *Config) *ElasticProcessor {
 	return &ElasticProcessor{
 		cfg:       cfg,
 		logger:    set.Logger,
-		storage:   make(map[string]any),
 		remappers: remappers,
 	}
 }
