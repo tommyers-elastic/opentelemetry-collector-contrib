@@ -390,6 +390,89 @@ func TestS3SQSReader_ReadAllDirectS3EventNotification(t *testing.T) {
 	mockSQS.AssertExpectations(t)
 }
 
+	mockS3 := new(mockS3ClientSQS)
+	mockSQS := new(mockSQSClient)
+
+	reader := &s3SQSNotificationReader{
+		logger:              logger,
+		s3Client:            mockS3,
+		sqsClient:           mockSQS,
+		queueURL:            cfg.SQS.QueueURL,
+		s3Bucket:            cfg.S3Downloader.S3Bucket,
+		s3Prefix:            cfg.S3Downloader.S3Prefix,
+		maxNumberOfMessages: 10,
+		waitTimeSeconds:     20,
+		deleteMessages:      false,
+	}
+
+	s3Event := s3EventNotification{
+		Records: []s3EventRecord{
+			{
+				EventSource: "aws:s3",
+				EventName:   "ObjectCreated:Put",
+				S3: s3Data{
+					Bucket: s3BucketData{
+						Name: "test-bucket",
+					},
+					Object: s3ObjectData{
+						Key: "test-key",
+					},
+				},
+			},
+		},
+	}
+
+	eventJSON, err := json.Marshal(s3Event)
+	require.NoError(t, err)
+
+	snsNotification := snsMessage{
+		Type:    "Notification",
+		Message: string(eventJSON),
+	}
+
+	snsJSON, err := json.Marshal(snsNotification)
+	require.NoError(t, err)
+
+	mockSQS.On("ReceiveMessage", mock.Anything, mock.MatchedBy(func(input *sqs.ReceiveMessageInput) bool {
+		return *input.QueueUrl == cfg.SQS.QueueURL &&
+			input.MaxNumberOfMessages == 10 &&
+			input.WaitTimeSeconds == 20
+	})).Return(
+		&sqs.ReceiveMessageOutput{
+			Messages: []types.Message{
+				{
+					Body:          aws.String(string(snsJSON)),
+					ReceiptHandle: aws.String("test-receipt-handle"),
+				},
+			},
+		},
+		nil,
+	).Once()
+
+	// After processing one message, return empty results to exit the loop
+	mockSQS.On("ReceiveMessage", mock.Anything, mock.Anything).Return(
+		&sqs.ReceiveMessageOutput{
+			Messages: []types.Message{},
+		},
+		nil,
+	)
+
+	mockS3.On("GetObject", mock.Anything, mock.Anything).Return(
+		[]byte("test-content"),
+		nil,
+	)
+
+	// Run test with callback
+	ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
+	defer cancel()
+	_ = reader.readAll(ctx, "test-telemetry", func(_ context.Context, _ string, _ []byte) error {
+		return nil
+	})
+
+	mockSQS.AssertExpectations(t)
+	mockSQS.AssertNotCalled(t, "DeleteMessage")
+}
+
 func TestS3SQSReader_ReadAllErrorHandling(t *testing.T) {
 	logger := zap.NewNop()
 	cfg := &Config{
