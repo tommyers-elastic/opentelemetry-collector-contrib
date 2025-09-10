@@ -97,6 +97,7 @@ func TestNewS3SQSReader(t *testing.T) {
 		assert.NoError(t, err)
 
 		// check all defaults are set
+        assert.True(t, r.deleteMessages)
 		assert.Equal(t, int32(10), r.maxNumberOfMessages)
 		assert.Equal(t, int32(20), r.waitTimeSeconds)
 	})
@@ -112,6 +113,7 @@ func TestNewS3SQSReader(t *testing.T) {
 				Region:              "us-east-1",
 				MaxNumberOfMessages: configoptional.Some(int64(5)),
 				WaitTimeSeconds:     configoptional.Some(int64(10)),
+				DeleteMessages:      configoptional.Some(false),
 			},
 		}
 
@@ -120,6 +122,7 @@ func TestNewS3SQSReader(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, int32(5), r.maxNumberOfMessages)
 		assert.Equal(t, int32(10), r.waitTimeSeconds)
+		assert.False(t, r.deleteMessages)
 	})
 }
 
@@ -148,6 +151,7 @@ func TestS3SQSReader_ReadAll(t *testing.T) {
 		s3Prefix:            cfg.S3Downloader.S3Prefix,
 		maxNumberOfMessages: 10,
 		waitTimeSeconds:     20,
+		deleteMessages:      true,
 	}
 
 	s3Event := s3EventNotification{
@@ -297,6 +301,7 @@ func TestS3SQSReader_ReadAllDirectS3EventNotification(t *testing.T) {
 		s3Prefix:            cfg.S3Downloader.S3Prefix,
 		maxNumberOfMessages: 10,
 		waitTimeSeconds:     20,
+		deleteMessages:      true,
 	}
 
 	// Create S3 event notification
@@ -389,6 +394,19 @@ func TestS3SQSReader_ReadAllDirectS3EventNotification(t *testing.T) {
 	mockS3.AssertExpectations(t)
 	mockSQS.AssertExpectations(t)
 }
+
+func TestS3SQSReader_ReadAllSkipDeletion(t *testing.T) {
+	logger := zap.NewNop()
+	cfg := &Config{
+		S3Downloader: S3DownloaderConfig{
+			S3Bucket: "test-bucket",
+			Region:   "us-east-1",
+		},
+		SQS: &SQSConfig{
+			QueueURL: "https://sqs.us-east-1.amazonaws.com/123456789012/test-queue",
+			Region:   "us-east-1",
+		},
+	}
 
 	mockS3 := new(mockS3ClientSQS)
 	mockSQS := new(mockSQSClient)
@@ -590,15 +608,6 @@ func TestS3SQSReader_ReadAllErrorHandling(t *testing.T) {
 			errors.New("object retrieval failed"),
 		)
 
-		// Mock message deletion
-		mockSQS.On("DeleteMessage", mock.Anything, mock.MatchedBy(func(input *sqs.DeleteMessageInput) bool {
-			return *input.QueueUrl == cfg.SQS.QueueURL &&
-				*input.ReceiptHandle == "test-receipt-handle"
-		})).Return(
-			&sqs.DeleteMessageOutput{},
-			nil,
-		)
-
 		ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
 		defer cancel()
 		err = reader.readAll(ctx, "test-telemetry", func(_ context.Context, _ string, _ []byte) error {
@@ -733,15 +742,6 @@ func TestS3SQSReader_ReadAllWithPrefix(t *testing.T) {
 	)
 
 	// Note: We do NOT set up a mock for "data/unmatched-key" because it should never be called
-
-	// Mock message deletion
-	mockSQS.On("DeleteMessage", mock.Anything, mock.MatchedBy(func(input *sqs.DeleteMessageInput) bool {
-		return *input.QueueUrl == cfg.SQS.QueueURL &&
-			*input.ReceiptHandle == "test-receipt-handle"
-	})).Return(
-		&sqs.DeleteMessageOutput{},
-		nil,
-	)
 
 	// Run test with callback
 	ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)

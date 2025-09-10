@@ -41,6 +41,7 @@ type SQSConfig struct {
 	// MaxNumberOfMessages specifies the maximum number of messages to receive in a single poll.
 	// Valid values: 1-10. Default is 10.
 	MaxNumberOfMessages configoptional.Optional[int64] `mapstructure:"max_number_of_messages"`
+	DeleteMessages configoptional.Optional[bool] `mapstructure:"delete_messages"`
 }
 
 // Notifications groups optional notification sources.

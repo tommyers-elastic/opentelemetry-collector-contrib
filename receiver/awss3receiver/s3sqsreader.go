@@ -92,6 +92,11 @@ func newS3SQSReader(ctx context.Context, logger *zap.Logger, cfg *Config) (*s3SQ
 		waitTime = int32(*val)
 	}
 
+	deleteMessages := true // Default to true
+	if val := cfg.SQS.DeleteMessages.Get(); val != nil {
+		deleteMessages = *val
+	}
+
 	return &s3SQSNotificationReader{
 		logger:              logger,
 		s3Client:            getObjectClient,
@@ -101,6 +106,7 @@ func newS3SQSReader(ctx context.Context, logger *zap.Logger, cfg *Config) (*s3SQ
 		s3Prefix:            cfg.S3Downloader.S3Prefix,
 		maxNumberOfMessages: maxMessages,
 		waitTimeSeconds:     waitTime,
+		deleteMessages:      deleteMessages,
 	}, nil
 }
 
@@ -213,12 +219,17 @@ func (r *s3SQSNotificationReader) readAll(ctx context.Context, _ string, callbac
 					}
 				}
 
-				_, err = r.sqsClient.DeleteMessage(ctx, &sqs.DeleteMessageInput{
-					QueueUrl:      aws.String(r.queueURL),
-					ReceiptHandle: message.ReceiptHandle,
-				})
-				if err != nil {
-					r.logger.Warn("Failed to delete message from SQS queue", zap.Error(err))
+				if r.deleteMessages {
+					r.logger.Debug("Deleting message from SQS queue",
+						zap.String("messageID", aws.ToString(message.MessageId)))
+
+					_, err = r.sqsClient.DeleteMessage(ctx, &sqs.DeleteMessageInput{
+						QueueUrl:      aws.String(r.queueURL),
+						ReceiptHandle: message.ReceiptHandle,
+					})
+					if err != nil {
+						r.logger.Warn("Failed to delete message from SQS queue", zap.Error(err))
+					}
 				}
 			}
 		}
