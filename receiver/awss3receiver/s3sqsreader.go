@@ -64,6 +64,7 @@ type s3SQSNotificationReader struct {
 	s3Prefix            string
 	maxNumberOfMessages int32
 	waitTimeSeconds     int32
+	deleteMessages      bool
 }
 
 func newS3SQSReader(ctx context.Context, logger *zap.Logger, cfg *Config) (*s3SQSNotificationReader, error) {
