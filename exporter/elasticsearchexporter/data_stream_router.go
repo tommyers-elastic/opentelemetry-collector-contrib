@@ -159,7 +159,8 @@ func routeRecord(
 	// 1. elasticsearch.index from attributes
 	// 2. read data_stream.* from attributes
 	// 3. receiver-based routing
-	// 4. use default hardcoded data_stream.*
+	// 4. extension-based routing
+	// 5. use default hardcoded data_stream.*
 	if esIndex, esIndexExists := getFromAttributes(elasticsearch.IndexAttributeName, "", recordAttr, scopeAttr, resourceAttr); esIndexExists {
 		// Advanced users can route documents by setting IndexAttributeName in a processor earlier in the pipeline.
 		// If `data_stream.*` needs to be set in the document, users should use `data_stream.*` attributes.
@@ -187,6 +188,16 @@ func routeRecord(
 		if submatch := receiverRegex.FindStringSubmatch(scope.Name()); len(submatch) > 0 {
 			receiverName := submatch[1]
 			dataset = receiverName
+		} else {
+			// Extension-based routing
+			// For example, awslogsencodingextension sets scope attributes according to log types
+			// We should probably extend this to support a common attributes pattern (`*.format`?), but for now
+			// let's just make sure it works for awslogsencodingextension.
+			if format, ok := scope.Attributes().Get("awslogs_encoding.format"); ok {
+				if format.Type() == pcommon.ValueTypeStr {
+					dataset = format.Str()
+				}
+			}
 		}
 	}
 

@@ -17,6 +17,7 @@ type routeTestCase struct {
 	name        string
 	mode        MappingMode
 	scopeName   string
+	scopeAttrs  map[string]any
 	recordAttrs map[string]any
 	want        elasticsearch.Index
 }
@@ -85,6 +86,51 @@ func createRouteTests(dsType string) []routeTestCase {
 			},
 			want: renderWantRoute(dsType, "foo", "bar", MappingOTel),
 		},
+		{
+			name:      "default with non-extensions scope attributes",
+			mode:      MappingNone,
+			scopeName: "github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/awslogsencodingextension",
+			scopeAttrs: map[string]any{
+				"some_other_attr": "should_be_ignored",
+			},
+			want: renderWantRoute(dsType, defaultDataStreamDataset, defaultDataStreamNamespace, MappingNone),
+		},
+		{
+			name:      "otel with non-extensions scope attributes",
+			mode:      MappingOTel,
+			scopeName: "github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/awslogsencodingextension",
+			scopeAttrs: map[string]any{
+				"some_other_attr": "should_be_ignored",
+			},
+			want: renderWantRoute(dsType, defaultDataStreamDataset, defaultDataStreamNamespace, MappingOTel),
+		},
+		{
+			name:      "default with awsencodingextension scope attributes",
+			mode:      MappingNone,
+			scopeName: "github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/awslogsencodingextension",
+			scopeAttrs: map[string]any{
+				"awslogs_encoding.format": "cloudtrail_log",
+			},
+			want: renderWantRoute(dsType, "cloudtrail_log", defaultDataStreamNamespace, MappingNone),
+		},
+		{
+			name:      "otel with awsencodingextension scope attributes",
+			mode:      MappingOTel,
+			scopeName: "github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/awslogsencodingextension",
+			scopeAttrs: map[string]any{
+				"awslogs_encoding.format": "cloudtrail_log",
+			},
+			want: renderWantRoute(dsType, "cloudtrail_log", defaultDataStreamNamespace, MappingOTel),
+		},
+		{
+			name:      "otel with awsencodingextension scope attributes that are the wrong type",
+			mode:      MappingOTel,
+			scopeName: "github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/awslogsencodingextension",
+			scopeAttrs: map[string]any{
+				"awslogs_encoding.format": int64(123),
+			},
+			want: renderWantRoute(dsType, defaultDataStreamDataset, defaultDataStreamNamespace, MappingOTel),
+		},
 	}
 }
 
@@ -96,6 +142,16 @@ func TestRouteLogRecord(t *testing.T) {
 			router := dynamicDocumentRouter{mode: tc.mode}
 			scope := pcommon.NewInstrumentationScope()
 			scope.SetName(tc.scopeName)
+			for k, v := range tc.scopeAttrs {
+				switch val := v.(type) {
+				case string:
+					scope.Attributes().PutStr(k, val)
+				case int64:
+					scope.Attributes().PutInt(k, val)
+				default:
+					t.Fatalf("unsupported attribute type for test %T", v)
+				}
+			}
 
 			recordAttrMap := pcommon.NewMap()
 			fillAttributeMap(recordAttrMap, tc.recordAttrs)
@@ -143,6 +199,16 @@ func TestRouteDataPoint(t *testing.T) {
 			router := dynamicDocumentRouter{mode: tc.mode}
 			scope := pcommon.NewInstrumentationScope()
 			scope.SetName(tc.scopeName)
+			for k, v := range tc.scopeAttrs {
+				switch val := v.(type) {
+				case string:
+					scope.Attributes().PutStr(k, val)
+				case int64:
+					scope.Attributes().PutInt(k, val)
+				default:
+					t.Fatalf("unsupported attribute type for test %T", v)
+				}
+			}
 
 			recordAttrMap := pcommon.NewMap()
 			fillAttributeMap(recordAttrMap, tc.recordAttrs)
@@ -162,6 +228,16 @@ func TestRouteSpan(t *testing.T) {
 			router := dynamicDocumentRouter{mode: tc.mode}
 			scope := pcommon.NewInstrumentationScope()
 			scope.SetName(tc.scopeName)
+			for k, v := range tc.scopeAttrs {
+				switch val := v.(type) {
+				case string:
+					scope.Attributes().PutStr(k, val)
+				case int64:
+					scope.Attributes().PutInt(k, val)
+				default:
+					t.Fatalf("unsupported attribute type for test %T", v)
+				}
+			}
 
 			recordAttrMap := pcommon.NewMap()
 			fillAttributeMap(recordAttrMap, tc.recordAttrs)
