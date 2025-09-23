@@ -123,13 +123,23 @@ func createRouteTests(dsType string) []routeTestCase {
 			want: renderWantRoute(dsType, "cloudtrail_log", defaultDataStreamNamespace, MappingOTel),
 		},
 		{
-			name:      "otel with awsencodingextension scope attributes that are the wrong type",
+			name:      "awsencodingextension scope attributes that are the wrong type",
 			mode:      MappingOTel,
 			scopeName: "github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/awslogsencodingextension",
 			scopeAttrs: map[string]any{
 				"awslogs_encoding.format": int64(123),
 			},
 			want: renderWantRoute(dsType, defaultDataStreamDataset, defaultDataStreamNamespace, MappingOTel),
+		},
+		{
+			name:      "awsencodingextension scope attributes and receiver scope name",
+			mode:      MappingOTel,
+			scopeName: "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/cpuscraper",
+			scopeAttrs: map[string]any{
+				"awslogs_encoding.format": "vpc_flow_log",
+			},
+			// extension-based routing should take precedence over receiver-based routing
+			want: renderWantRoute(dsType, "vpc_flow_log", defaultDataStreamNamespace, MappingOTel),
 		},
 	}
 }

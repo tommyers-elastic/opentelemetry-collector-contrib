@@ -158,8 +158,8 @@ func routeRecord(
 	// Order:
 	// 1. elasticsearch.index from attributes
 	// 2. read data_stream.* from attributes
-	// 3. receiver-based routing
-	// 4. extension-based routing
+	// 3. extension-based routing
+	// 4. receiver-based routing
 	// 5. use default hardcoded data_stream.*
 	if esIndex, esIndexExists := getFromAttributes(elasticsearch.IndexAttributeName, "", recordAttr, scopeAttr, resourceAttr); esIndexExists {
 		// Advanced users can route documents by setting IndexAttributeName in a processor earlier in the pipeline.
@@ -179,24 +179,24 @@ func routeRecord(
 		}
 	}
 
-	// Only use receiver-based routing if dataset is not specified.
+	// Only use extension or receiver-based routing if dataset is not specified.
 	if !datasetExists {
-		// Receiver-based routing
-		// For example, hostmetricsreceiver (or hostmetricsreceiver.otel in the OTel output mode)
-		// for the scope name
-		// github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/cpuscraper
-		if submatch := receiverRegex.FindStringSubmatch(scope.Name()); len(submatch) > 0 {
-			receiverName := submatch[1]
-			dataset = receiverName
+		// Extension-based routing
+		// For example, awslogsencodingextension sets scope attributes according to log types
+		// We should probably extend this to support a common attributes pattern (`*.format`?), but for now
+		// let's just make sure it works for awslogsencodingextension.
+		if format, ok := scope.Attributes().Get("awslogs_encoding.format"); ok {
+			if format.Type() == pcommon.ValueTypeStr {
+				dataset = format.Str()
+			}
 		} else {
-			// Extension-based routing
-			// For example, awslogsencodingextension sets scope attributes according to log types
-			// We should probably extend this to support a common attributes pattern (`*.format`?), but for now
-			// let's just make sure it works for awslogsencodingextension.
-			if format, ok := scope.Attributes().Get("awslogs_encoding.format"); ok {
-				if format.Type() == pcommon.ValueTypeStr {
-					dataset = format.Str()
-				}
+			// Receiver-based routing
+			// For example, hostmetricsreceiver (or hostmetricsreceiver.otel in the OTel output mode)
+			// for the scope name
+			// github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/cpuscraper
+			if submatch := receiverRegex.FindStringSubmatch(scope.Name()); len(submatch) > 0 {
+				receiverName := submatch[1]
+				dataset = receiverName
 			}
 		}
 	}
