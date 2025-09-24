@@ -109,18 +109,18 @@ func createRouteTests(dsType string) []routeTestCase {
 			mode:      MappingNone,
 			scopeName: "github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/awslogsencodingextension",
 			scopeAttrs: map[string]any{
-				"awslogs_encoding.format": "cloudtrail_log",
+				"awslogs_encoding.format": "cloudtrail",
 			},
-			want: renderWantRoute(dsType, "cloudtrail_log", defaultDataStreamNamespace, MappingNone),
+			want: renderWantRoute(dsType, "aws.cloudtrail", defaultDataStreamNamespace, MappingNone),
 		},
 		{
 			name:      "otel with awsencodingextension scope attributes",
 			mode:      MappingOTel,
 			scopeName: "github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/awslogsencodingextension",
 			scopeAttrs: map[string]any{
-				"awslogs_encoding.format": "cloudtrail_log",
+				"awslogs_encoding.format": "cloudtrail",
 			},
-			want: renderWantRoute(dsType, "cloudtrail_log", defaultDataStreamNamespace, MappingOTel),
+			want: renderWantRoute(dsType, "aws.cloudtrail", defaultDataStreamNamespace, MappingOTel),
 		},
 		{
 			name:      "awsencodingextension scope attributes that are the wrong type",
@@ -136,10 +136,10 @@ func createRouteTests(dsType string) []routeTestCase {
 			mode:      MappingOTel,
 			scopeName: "github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/cpuscraper",
 			scopeAttrs: map[string]any{
-				"awslogs_encoding.format": "vpc_flow_log",
+				"awslogs_encoding.format": "vpcflow",
 			},
 			// extension-based routing should take precedence over receiver-based routing
-			want: renderWantRoute(dsType, "vpc_flow_log", defaultDataStreamNamespace, MappingOTel),
+			want: renderWantRoute(dsType, "aws.vpcflow", defaultDataStreamNamespace, MappingOTel),
 		},
 	}
 }
