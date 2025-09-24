@@ -187,7 +187,7 @@ func routeRecord(
 		// let's just make sure it works for awslogsencodingextension.
 		if format, ok := scope.Attributes().Get("awslogs_encoding.format"); ok {
 			if format.Type() == pcommon.ValueTypeStr {
-				dataset = format.Str()
+				dataset = "aws." + format.Str()
 			}
 		} else {
 			// Receiver-based routing
