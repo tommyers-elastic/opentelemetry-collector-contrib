@@ -21,6 +21,7 @@ const (
 	maxDataStreamBytes       = 100
 	disallowedNamespaceRunes = "\\/*?\"<>| ,#:"
 	disallowedDatasetRunes   = "-\\/*?\"<>| ,#:"
+	encodingFormatAttribute  = "encoding.format"
 )
 
 // Sanitize the datastream fields (dataset, namespace) to apply restrictions
@@ -158,7 +159,7 @@ func routeRecord(
 	// Order:
 	// 1. elasticsearch.index from attributes
 	// 2. read data_stream.* from attributes
-	// 3. extension-based routing
+	// 3. encoding-based routing
 	// 4. receiver-based routing
 	// 5. use default hardcoded data_stream.*
 	if esIndex, esIndexExists := getFromAttributes(elasticsearch.IndexAttributeName, "", recordAttr, scopeAttr, resourceAttr); esIndexExists {
@@ -179,15 +180,14 @@ func routeRecord(
 		}
 	}
 
-	// Only use extension or receiver-based routing if dataset is not specified.
+	// Only use encoding or receiver-based routing if dataset is not specified.
 	if !datasetExists {
-		// Extension-based routing
-		// For example, awslogsencodingextension sets scope attributes according to log types
-		// We should probably extend this to support a common attributes pattern (`*.format`?), but for now
-		// let's just make sure it works for awslogsencodingextension.
-		if format, ok := scope.Attributes().Get("awslogs_encoding.format"); ok {
+		// Encoding-based routing
+		// Encoding extensions may set the `encoding.format` scope attribute according to log types.
+		// For example, awslogsencodingextension sets `aws.elbaccess`, `aws.vpcflow`, etc.
+		if format, ok := scope.Attributes().Get(encodingFormatAttribute); ok {
 			if format.Type() == pcommon.ValueTypeStr {
-				dataset = "aws." + format.Str()
+				dataset = format.Str()
 			}
 		} else {
 			// Receiver-based routing
