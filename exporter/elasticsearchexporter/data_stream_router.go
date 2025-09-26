@@ -167,9 +167,8 @@ func routeRecord(
 	// Order:
 	// 1. elasticsearch.index from attributes
 	// 2. read data_stream.* from attributes
-	// 3. encoding-based routing
-	// 4. receiver-based routing
-	// 5. use default hardcoded data_stream.*
+	// 3. scope-based routing
+	// 4. use default hardcoded data_stream.*
 	if esIndex, esIndexExists := getFromAttributes(elasticsearch.IndexAttributeName, "", recordAttr, scopeAttr, resourceAttr); esIndexExists {
 		// Advanced users can route documents by setting IndexAttributeName in a processor earlier in the pipeline.
 		// If `data_stream.*` needs to be set in the document, users should use `data_stream.*` attributes.
@@ -188,29 +187,12 @@ func routeRecord(
 		}
 	}
 
-	// Only use encoding or receiver-based routing if dataset is not specified.
+	// Only use scope-based routing if dataset is not specified.
 	if !datasetExists {
-		// Encoding-based routing
-		// Encoding extensions may set the `encoding.format` scope attribute according to log types.
-		// For example, awslogsencodingextension sets `aws.elbaccess`, `aws.vpcflow`, etc.
-		if format, ok := scope.Attributes().Get(encodingFormatAttribute); ok {
-			if format.Type() == pcommon.ValueTypeStr {
-				dataset = format.Str()
-			}
-		} else {
-			if selfTelemetryScopeNames[scope.Name()] {
-				// For collector self-telemetry, use a fixed dataset name
-				dataset = collectorSelfTelemetryDataStreamDataset
-			} else {
-				// Receiver-based routing
-				// For example, hostmetricsreceiver (or hostmetricsreceiver.otel in the OTel output mode)
-				// for the scope name
-				// github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/cpuscraper
-				loc := receiverRegex.FindStringSubmatchIndex(scope.Name())
-				if len(loc) == 4 {
-					dataset = scope.Name()[loc[2]:loc[3]]
-				}
-			}
+		var routingDataset string
+		routingDataset, datasetExists = applyScopeRouting(scope)
+		if datasetExists {
+			dataset = routingDataset
 		}
 	}
 
@@ -224,4 +206,36 @@ func routeRecord(
 	dataset = sanitizeDataStreamField(dataset, disallowedDatasetRunes, datasetSuffix)
 	namespace = sanitizeDataStreamField(namespace, disallowedNamespaceRunes, "")
 	return elasticsearch.NewDataStreamIndex(dsType, dataset, namespace), nil
+}
+
+func applyScopeRouting(scope pcommon.InstrumentationScope) (string, bool) {
+	// Priority:
+	// 1. self-telemetry
+	// 2. encoding-based routing
+	// 3. receiver-based routing
+
+	// For collector self-telemetry, use a fixed dataset name
+	if selfTelemetryScopeNames[scope.Name()] {
+		return collectorSelfTelemetryDataStreamDataset, true
+	}
+
+	// Encoding-based routing
+	// Encoding extensions may set the `encoding.format` scope attribute according to log types.
+	// For example, awslogsencodingextension sets `aws.elbaccess`, `aws.vpcflow`, etc.
+	if format, ok := scope.Attributes().Get(encodingFormatAttribute); ok {
+		if format.Type() == pcommon.ValueTypeStr {
+			return format.Str(), true
+		}
+	}
+
+	// Receiver-based routing
+	// For example, hostmetricsreceiver (or hostmetricsreceiver.otel in the OTel output mode)
+	// for the scope name
+	// github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/cpuscraper
+	loc := receiverRegex.FindStringSubmatchIndex(scope.Name())
+	if len(loc) == 4 {
+		return scope.Name()[loc[2]:loc[3]], true
+	}
+
+	return "", false
 }
