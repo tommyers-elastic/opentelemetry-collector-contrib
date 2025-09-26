@@ -191,7 +191,6 @@ func routeRecord(
 	if !datasetExists {
 		if ds, ok := applyScopeRouting(scope); ok {
 			dataset = ds
-			datasetExists = true
 		}
 	}
 
