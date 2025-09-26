@@ -94,16 +94,7 @@ func TestRouteLogRecord(t *testing.T) {
 			router := dynamicDocumentRouter{mode: tc.mode}
 			scope := pcommon.NewInstrumentationScope()
 			scope.SetName(tc.scopeName)
-			for k, v := range tc.scopeAttrs {
-				switch val := v.(type) {
-				case string:
-					scope.Attributes().PutStr(k, val)
-				case int64:
-					scope.Attributes().PutInt(k, val)
-				default:
-					t.Fatalf("unsupported attribute type for test %T", v)
-				}
-			}
+			fillAttributeMap(scope.Attributes(), tc.scopeAttrs)
 
 			recordAttrMap := pcommon.NewMap()
 			fillAttributeMap(recordAttrMap, tc.recordAttrs)
@@ -151,16 +142,7 @@ func TestRouteDataPoint(t *testing.T) {
 			router := dynamicDocumentRouter{mode: tc.mode}
 			scope := pcommon.NewInstrumentationScope()
 			scope.SetName(tc.scopeName)
-			for k, v := range tc.scopeAttrs {
-				switch val := v.(type) {
-				case string:
-					scope.Attributes().PutStr(k, val)
-				case int64:
-					scope.Attributes().PutInt(k, val)
-				default:
-					t.Fatalf("unsupported attribute type for test %T", v)
-				}
-			}
+			fillAttributeMap(scope.Attributes(), tc.scopeAttrs)
 
 			recordAttrMap := pcommon.NewMap()
 			fillAttributeMap(recordAttrMap, tc.recordAttrs)
@@ -180,16 +162,7 @@ func TestRouteSpan(t *testing.T) {
 			router := dynamicDocumentRouter{mode: tc.mode}
 			scope := pcommon.NewInstrumentationScope()
 			scope.SetName(tc.scopeName)
-			for k, v := range tc.scopeAttrs {
-				switch val := v.(type) {
-				case string:
-					scope.Attributes().PutStr(k, val)
-				case int64:
-					scope.Attributes().PutInt(k, val)
-				default:
-					t.Fatalf("unsupported attribute type for test %T", v)
-				}
-			}
+			fillAttributeMap(scope.Attributes(), tc.scopeAttrs)
 
 			recordAttrMap := pcommon.NewMap()
 			fillAttributeMap(recordAttrMap, tc.recordAttrs)
@@ -303,7 +276,7 @@ func TestApplyRouting(t *testing.T) {
 			name:      "encoding format that is wrong type is ignored",
 			scopeName: "github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/awslogsencodingextension",
 			scopeAttrs: map[string]any{
-				"encoding.format": int64(123),
+				"encoding.format": true,
 			},
 			wantDataset: "",
 			wantFound:   false,
@@ -323,17 +296,7 @@ func TestApplyRouting(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			scope := pcommon.NewInstrumentationScope()
 			scope.SetName(tc.scopeName)
-
-			for k, v := range tc.scopeAttrs {
-				switch val := v.(type) {
-				case string:
-					scope.Attributes().PutStr(k, val)
-				case int64:
-					scope.Attributes().PutInt(k, val)
-				default:
-					t.Fatalf("unsupported attribute type for test %T", v)
-				}
-			}
+			fillAttributeMap(scope.Attributes(), tc.scopeAttrs)
 
 			dataset, found := applyScopeRouting(scope)
 			assert.Equal(t, tc.wantDataset, dataset)
