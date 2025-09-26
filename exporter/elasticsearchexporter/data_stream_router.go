@@ -189,10 +189,9 @@ func routeRecord(
 
 	// Only use scope-based routing if dataset is not specified.
 	if !datasetExists {
-		var routingDataset string
-		routingDataset, datasetExists = applyScopeRouting(scope)
-		if datasetExists {
-			dataset = routingDataset
+		if ds, ok := applyScopeRouting(scope); ok {
+			dataset = ds
+			datasetExists = true
 		}
 	}
 
