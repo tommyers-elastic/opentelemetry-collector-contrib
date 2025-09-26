@@ -26,10 +26,10 @@ var selfTelemetryScopeNames = map[string]bool{
 }
 
 const (
-	maxDataStreamBytes       = 100
-	disallowedNamespaceRunes = "\\/*?\"<>| ,#:"
-	disallowedDatasetRunes   = "-\\/*?\"<>| ,#:"
-	encodingFormatAttribute  = "encoding.format"
+	maxDataStreamBytes          = 100
+	disallowedNamespaceRunes    = "\\/*?\"<>| ,#:"
+	disallowedDatasetRunes      = "-\\/*?\"<>| ,#:"
+	encodingFormatAttributeName = "encoding.format"
 )
 
 // Sanitize the datastream fields (dataset, namespace) to apply restrictions
@@ -222,9 +222,11 @@ func applyScopeRouting(scope pcommon.InstrumentationScope) (string, bool) {
 	// Encoding-based routing
 	// Encoding extensions may set the `encoding.format` scope attribute according to log types.
 	// For example, awslogsencodingextension sets `aws.elbaccess`, `aws.vpcflow`, etc.
-	if format, ok := scope.Attributes().Get(encodingFormatAttribute); ok {
+	if format, ok := scope.Attributes().Get(encodingFormatAttributeName); ok {
 		if format.Type() == pcommon.ValueTypeStr {
-			return format.Str(), true
+			if stringVal := format.Str(); stringVal != "" {
+				return stringVal, true
+			}
 		}
 	}
 
