@@ -290,6 +290,15 @@ func TestApplyRouting(t *testing.T) {
 			wantDataset: "",
 			wantFound:   false,
 		},
+		{
+			name:      "empty encoding.format scope attribute is ignored",
+			scopeName: "github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/awslogsencodingextension",
+			scopeAttrs: map[string]any{
+				"encoding.format": "",
+			},
+			wantDataset: "",
+			wantFound:   false,
+		},
 	}
 
 	for _, tc := range tests {
