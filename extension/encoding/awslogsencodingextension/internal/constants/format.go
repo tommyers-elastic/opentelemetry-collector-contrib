@@ -4,12 +4,12 @@
 package constants // import "github.com/open-telemetry/opentelemetry-collector-contrib/extension/encoding/awslogsencodingextension/internal/constants"
 
 const (
-	FormatCloudWatchLogsSubscriptionFilter = "cloudwatch"
-	FormatVPCFlowLog                       = "vpcflow"
-	FormatS3AccessLog                      = "s3access"
-	FormatWAFLog                           = "waf"
-	FormatCloudTrailLog                    = "cloudtrail"
-	FormatELBAccessLog                     = "elbaccess"
+	FormatCloudWatchLogsSubscriptionFilter = "aws.cloudwatch"
+	FormatVPCFlowLog                       = "aws.vpcflow"
+	FormatS3AccessLog                      = "aws.s3access"
+	FormatWAFLog                           = "aws.waf"
+	FormatCloudTrailLog                    = "aws.cloudtrail"
+	FormatELBAccessLog                     = "aws.elbaccess"
 
 	// Legacy format values (v1) - kept for backward compatibility
 	FormatVPCFlowLogV1                       = "vpc_flow_log"

@@ -38,12 +38,12 @@ type Config struct {
 	// Format defines the AWS logs format.
 	//
 	// Current valid values are:
-	// - cloudwatch
-	// - vpcflow
-	// - s3access
-	// - waf
-	// - cloudtrail
-	// - elbaccess
+	// - aws.cloudwatch
+	// - aws.vpcflow
+	// - aws.s3access
+	// - aws.waf
+	// - aws.cloudtrail
+	// - aws.elbaccess
 	//
 	Format string `mapstructure:"format"`
 
