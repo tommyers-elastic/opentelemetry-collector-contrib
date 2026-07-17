@@ -17,6 +17,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/cloudwatchlogs/types"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"sync/atomic"
+
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
 	"go.opentelemetry.io/collector/consumer/consumertest"
@@ -615,9 +617,14 @@ func TestDeletedLogGroupContinuesPolling(t *testing.T) {
 	}, sink)
 	mc := &mockClient{}
 
+	// Count FilterLogEvents calls via Run callbacks so we can wait for both
+	// groups to be polled before shutting down, avoiding a race where Shutdown
+	// closes doneChan before the second group's poll has started.
+	var pollCount atomic.Int32
+
 	mc.On("FilterLogEvents", mock.Anything, mock.MatchedBy(func(input *cloudwatchlogs.FilterLogEventsInput) bool {
 		return *input.LogGroupName == "existing-group"
-	}), mock.Anything).Return(&cloudwatchlogs.FilterLogEventsOutput{
+	}), mock.Anything).Run(func(_ mock.Arguments) { pollCount.Add(1) }).Return(&cloudwatchlogs.FilterLogEventsOutput{
 		Events: []types.FilteredLogEvent{
 			{
 				EventId:       aws.String("event1"),
@@ -631,7 +638,7 @@ func TestDeletedLogGroupContinuesPolling(t *testing.T) {
 
 	mc.On("FilterLogEvents", mock.Anything, mock.MatchedBy(func(input *cloudwatchlogs.FilterLogEventsInput) bool {
 		return *input.LogGroupName == "deleted-group"
-	}), mock.Anything).Return((*cloudwatchlogs.FilterLogEventsOutput)(nil), &types.ResourceNotFoundException{
+	}), mock.Anything).Run(func(_ mock.Arguments) { pollCount.Add(1) }).Return((*cloudwatchlogs.FilterLogEventsOutput)(nil), &types.ResourceNotFoundException{
 		Message: aws.String("The specified log group does not exist"),
 	})
 
@@ -640,9 +647,13 @@ func TestDeletedLogGroupContinuesPolling(t *testing.T) {
 	err := logsRcvr.Start(t.Context(), componenttest.NewNopHost())
 	require.NoError(t, err)
 
+	// Wait for both groups to be polled before shutting down; without this,
+	// Shutdown can close doneChan between the two sequential group polls and
+	// the second group's FilterLogEvents call never happens.
 	require.Eventually(t, func() bool {
-		return sink.LogRecordCount() > 0
+		return pollCount.Load() >= 2
 	}, 2*time.Second, 10*time.Millisecond)
+
 	logs := sink.AllLogs()
 	require.Len(t, logs, 1)
 	require.Equal(t, 1, logs[0].LogRecordCount())
