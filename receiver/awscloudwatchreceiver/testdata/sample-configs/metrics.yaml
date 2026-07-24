@@ -7,6 +7,6 @@ receivers:
       period: 300s
       discovery:
         filters:
-          namespace: AWS/EC2
+          - namespace: AWS/EC2
         limit: 50
 

@@ -1,0 +1,5 @@
+change_type: 'enhancement'
+component: receiver/aws_cloudwatch
+note: Support metrics discovery filtering by multiple namespaces, subsets of metric names, and per-metric statistics by changing `metrics.discovery.filters` to a list of filter entries. The previous single-object `filters` form and top-level `metrics.discovery.stats` are deprecated but still accepted.
+issues: [49842]
+change_logs: [user]

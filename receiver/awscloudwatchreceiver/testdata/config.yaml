@@ -86,7 +86,7 @@ aws_cloudwatch/metrics-discovery:
     period: 300s
     discovery:
       filters:
-        namespace: AWS/EC2
+        - namespace: AWS/EC2
       limit: 200
 
 aws_cloudwatch/metrics-discovery-gauge:
@@ -96,9 +96,11 @@ aws_cloudwatch/metrics-discovery-gauge:
     period: 300s
     discovery:
       filters:
-        namespace: AWS/EC2
+        - namespace: AWS/EC2
+          metric_names: [CPUUtilization, NetworkIn]
+          stats: [Sum, Average]
+        - namespace: AWS/RDS
       limit: 100
-      stats: [Sum, Average]
 
 aws_cloudwatch/metrics-discovery-no-namespace:
   region: us-west-2
@@ -107,3 +109,15 @@ aws_cloudwatch/metrics-discovery-no-namespace:
     period: 120s
     discovery:
       limit: 50
+
+aws_cloudwatch/metrics-discovery-deprecated:
+  region: us-east-1
+  metrics:
+    collection_interval: 5m
+    period: 300s
+    discovery:
+      filters:
+        namespace: AWS/EC2
+        metric_name: CPUUtilization
+      limit: 100
+      stats: [Sum, Average]

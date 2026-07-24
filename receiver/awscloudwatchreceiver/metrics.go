@@ -63,6 +63,12 @@ func newCloudWatchMetricsScraper(cfg *Config, settings receiver.Settings) *cloud
 			discoveryCfg.Limit = defaultMetricsDiscoverLimit
 		}
 		discovery = &discoveryCfg
+		if d.deprecatedSingleObjectFilters {
+			settings.Logger.Warn("metrics.discovery.filters as a single object is deprecated; use a list of filter entries")
+		}
+		if len(d.Stats) > 0 {
+			settings.Logger.Warn("metrics.discovery.stats is deprecated; set stats on each filters entry instead")
+		}
 	}
 	return &cloudWatchMetricsScraper{
 		settings:           settings,
@@ -153,41 +159,75 @@ func alignTimeToPeriod(t time.Time, periodSec int64) time.Time {
 	return time.Unix(aligned, 0).UTC()
 }
 
-// listMetrics discovers metrics via ListMetrics API, respecting discovery config (namespace, metric name, limit).
-func (s *cloudWatchMetricsScraper) listMetrics(ctx context.Context) ([]MetricQuery, error) {
-	input := &cloudwatch.ListMetricsInput{}
-	if f := s.discovery.Filters.Get(); f != nil {
-		if f.Namespace != "" {
-			input.Namespace = aws.String(f.Namespace)
+// listFilter is one resolved ListMetrics query: an optional namespace/metric name pair plus the
+// stats applied to the metrics it discovers.
+type listFilter struct {
+	namespace  string
+	metricName string
+	stats      []string
+}
+
+// resolveListFilters expands the discovery config into concrete ListMetrics queries: one per
+// (namespace, metric name) pair, or one per namespace when an entry has no metric names.
+// Entry stats fall back to the deprecated top-level stats when unset.
+func resolveListFilters(d *MetricsDiscoveryConfig) []listFilter {
+	if len(d.Filters) == 0 {
+		return []listFilter{{stats: d.Stats}}
+	}
+	var out []listFilter
+	for _, f := range d.Filters {
+		stats := f.Stats
+		if len(stats) == 0 {
+			stats = d.Stats
 		}
-		if f.MetricName != "" {
-			input.MetricName = aws.String(f.MetricName)
+		if len(f.MetricNames) == 0 {
+			out = append(out, listFilter{namespace: f.Namespace, stats: stats})
+			continue
+		}
+		for _, name := range f.MetricNames {
+			out = append(out, listFilter{namespace: f.Namespace, metricName: name, stats: stats})
 		}
 	}
+	return out
+}
 
+// listMetrics discovers metrics via the ListMetrics API, one paginated call sequence per resolved
+// filter. The discovery limit caps the total number of metrics across all filters.
+func (s *cloudWatchMetricsScraper) listMetrics(ctx context.Context) ([]MetricQuery, error) {
 	var out []MetricQuery
-	var nextToken *string
-	for {
-		input.NextToken = nextToken
-		resp, err := s.client.ListMetrics(ctx, input)
-		if err != nil {
-			return nil, err
+	for _, lf := range resolveListFilters(s.discovery) {
+		input := &cloudwatch.ListMetricsInput{}
+		if lf.namespace != "" {
+			input.Namespace = aws.String(lf.namespace)
 		}
-		for _, met := range resp.Metrics {
-			if len(out) >= s.discovery.Limit {
-				return out, nil
-			}
-			q := MetricQuery{
-				Namespace:  aws.ToString(met.Namespace),
-				MetricName: aws.ToString(met.MetricName),
-				Dimensions: dimensionsToMap(met.Dimensions),
-				Stats:      s.discovery.Stats,
-			}
-			out = append(out, q)
+		if lf.metricName != "" {
+			input.MetricName = aws.String(lf.metricName)
 		}
-		nextToken = resp.NextToken
-		if nextToken == nil {
-			break
+
+		var nextToken *string
+		for {
+			input.NextToken = nextToken
+			resp, err := s.client.ListMetrics(ctx, input)
+			if err != nil {
+				return nil, err
+			}
+			for _, met := range resp.Metrics {
+				if len(out) >= s.discovery.Limit {
+					s.settings.Logger.Warn("metrics discovery limit reached; some discovered metrics will not be scraped",
+						zap.Int("limit", s.discovery.Limit))
+					return out, nil
+				}
+				out = append(out, MetricQuery{
+					Namespace:  aws.ToString(met.Namespace),
+					MetricName: aws.ToString(met.MetricName),
+					Dimensions: dimensionsToMap(met.Dimensions),
+					Stats:      lf.stats,
+				})
+			}
+			nextToken = resp.NextToken
+			if nextToken == nil {
+				break
+			}
 		}
 	}
 	return out, nil

@@ -15,7 +15,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/receiver"
 	"go.uber.org/zap"
 
@@ -491,6 +490,133 @@ func TestListMetrics_Error(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestListMetrics_MultipleFilters(t *testing.T) {
+	mc := &mockMetricsClient{}
+	// One ListMetrics call per (namespace, metric name) pair, plus one namespace-wide call for the
+	// entry without metric names.
+	mc.On("ListMetrics", mock.Anything, mock.MatchedBy(func(p *cloudwatch.ListMetricsInput) bool {
+		return aws.ToString(p.Namespace) == "AWS/EC2" && aws.ToString(p.MetricName) == "CPUUtilization"
+	}), mock.Anything).Return(
+		&cloudwatch.ListMetricsOutput{
+			Metrics: []types.Metric{{Namespace: aws.String("AWS/EC2"), MetricName: aws.String("CPUUtilization")}},
+		}, nil,
+	).Once()
+	mc.On("ListMetrics", mock.Anything, mock.MatchedBy(func(p *cloudwatch.ListMetricsInput) bool {
+		return aws.ToString(p.Namespace) == "AWS/EC2" && aws.ToString(p.MetricName) == "NetworkIn"
+	}), mock.Anything).Return(
+		&cloudwatch.ListMetricsOutput{
+			Metrics: []types.Metric{{Namespace: aws.String("AWS/EC2"), MetricName: aws.String("NetworkIn")}},
+		}, nil,
+	).Once()
+	mc.On("ListMetrics", mock.Anything, mock.MatchedBy(func(p *cloudwatch.ListMetricsInput) bool {
+		return aws.ToString(p.Namespace) == "AWS/RDS" && p.MetricName == nil
+	}), mock.Anything).Return(
+		&cloudwatch.ListMetricsOutput{
+			Metrics: []types.Metric{{Namespace: aws.String("AWS/RDS"), MetricName: aws.String("FreeStorageSpace")}},
+		}, nil,
+	).Once()
+
+	cfg := &Config{Region: "us-east-1", Metrics: MetricsConfig{
+		Discovery: &MetricsDiscoveryConfig{
+			Filters: []MetricsDiscoveryFilter{
+				{Namespace: "AWS/EC2", MetricNames: []string{"CPUUtilization", "NetworkIn"}, Stats: []string{"Average"}},
+				{Namespace: "AWS/RDS"},
+			},
+			Limit: 10,
+		},
+	}}
+	scr := testScraper(cfg)
+	scr.client = mc
+
+	out, err := scr.listMetrics(t.Context())
+	require.NoError(t, err)
+	require.Len(t, out, 3)
+	require.Equal(t, []string{"Average"}, out[0].Stats)
+	require.Equal(t, []string{"Average"}, out[1].Stats)
+	require.Empty(t, out[2].Stats)
+	mc.AssertExpectations(t)
+}
+
+func TestListMetrics_DeprecatedTopLevelStatsFallback(t *testing.T) {
+	mc := &mockMetricsClient{}
+	mc.On("ListMetrics", mock.Anything, mock.MatchedBy(func(p *cloudwatch.ListMetricsInput) bool {
+		return aws.ToString(p.Namespace) == "AWS/EC2"
+	}), mock.Anything).Return(
+		&cloudwatch.ListMetricsOutput{
+			Metrics: []types.Metric{{Namespace: aws.String("AWS/EC2"), MetricName: aws.String("CPUUtilization")}},
+		}, nil,
+	).Once()
+	mc.On("ListMetrics", mock.Anything, mock.MatchedBy(func(p *cloudwatch.ListMetricsInput) bool {
+		return aws.ToString(p.Namespace) == "AWS/RDS"
+	}), mock.Anything).Return(
+		&cloudwatch.ListMetricsOutput{
+			Metrics: []types.Metric{{Namespace: aws.String("AWS/RDS"), MetricName: aws.String("FreeStorageSpace")}},
+		}, nil,
+	).Once()
+
+	cfg := &Config{Region: "us-east-1", Metrics: MetricsConfig{
+		Discovery: &MetricsDiscoveryConfig{
+			Filters: []MetricsDiscoveryFilter{
+				{Namespace: "AWS/EC2", Stats: []string{"Maximum"}},
+				{Namespace: "AWS/RDS"},
+			},
+			Limit: 10,
+			Stats: []string{"Sum", "Average"},
+		},
+	}}
+	scr := testScraper(cfg)
+	scr.client = mc
+
+	out, err := scr.listMetrics(t.Context())
+	require.NoError(t, err)
+	require.Len(t, out, 2)
+	// Entry stats win; entries without stats fall back to the deprecated top-level stats.
+	require.Equal(t, []string{"Maximum"}, out[0].Stats)
+	require.Equal(t, []string{"Sum", "Average"}, out[1].Stats)
+	mc.AssertExpectations(t)
+}
+
+func TestListMetrics_LimitAcrossFilters(t *testing.T) {
+	mc := &mockMetricsClient{}
+	mc.On("ListMetrics", mock.Anything, mock.MatchedBy(func(p *cloudwatch.ListMetricsInput) bool {
+		return aws.ToString(p.Namespace) == "AWS/EC2"
+	}), mock.Anything).Return(
+		&cloudwatch.ListMetricsOutput{
+			Metrics: []types.Metric{
+				{Namespace: aws.String("AWS/EC2"), MetricName: aws.String("M1")},
+				{Namespace: aws.String("AWS/EC2"), MetricName: aws.String("M2")},
+			},
+		}, nil,
+	).Once()
+	mc.On("ListMetrics", mock.Anything, mock.MatchedBy(func(p *cloudwatch.ListMetricsInput) bool {
+		return aws.ToString(p.Namespace) == "AWS/RDS"
+	}), mock.Anything).Return(
+		&cloudwatch.ListMetricsOutput{
+			Metrics: []types.Metric{
+				{Namespace: aws.String("AWS/RDS"), MetricName: aws.String("M3")},
+				{Namespace: aws.String("AWS/RDS"), MetricName: aws.String("M4")},
+			},
+		}, nil,
+	).Once()
+
+	cfg := &Config{Region: "us-east-1", Metrics: MetricsConfig{
+		Discovery: &MetricsDiscoveryConfig{
+			Filters: []MetricsDiscoveryFilter{
+				{Namespace: "AWS/EC2"},
+				{Namespace: "AWS/RDS"},
+			},
+			Limit: 3,
+		},
+	}}
+	scr := testScraper(cfg)
+	scr.client = mc
+
+	out, err := scr.listMetrics(t.Context())
+	require.NoError(t, err)
+	require.Len(t, out, 3)
+	mc.AssertExpectations(t)
+}
+
 // --- pollBatch tests ---
 
 func TestPollBatch_GeneratesFourSubQueries(t *testing.T) {
@@ -594,7 +720,7 @@ func TestScrape_Discovery(t *testing.T) {
 		Metrics: MetricsConfig{
 			Period: 60 * time.Second,
 			Discovery: &MetricsDiscoveryConfig{
-				Filters: configoptional.Some(MetricsDiscoveryFilters{Namespace: "AWS/EC2"}),
+				Filters: []MetricsDiscoveryFilter{{Namespace: "AWS/EC2"}},
 				Limit:   10,
 			},
 		},

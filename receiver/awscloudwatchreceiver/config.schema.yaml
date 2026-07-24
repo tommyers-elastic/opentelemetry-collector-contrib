@@ -87,23 +87,33 @@ $defs:
     type: object
     properties:
       filters:
-        x-optional: true
-        $ref: metrics_discovery_filters
+        description: Filters narrows which metrics are discovered. Each entry selects a namespace, optionally a set of metric names within it, and optionally the statistics to fetch for those metrics. When empty, all metrics in all namespaces are discovered.
+        type: array
+        items:
+          $ref: metrics_discovery_filter
       limit:
         type: integer
       stats:
-        description: Stats selects which CloudWatch statistics to fetch for all discovered metrics. Same semantics as MetricQuery.Stats.
+        description: 'Stats selects which CloudWatch statistics to fetch for discovered metrics whose filter entry does not set its own stats. Same semantics as MetricQuery.Stats. Deprecated: set stats on each filters entry instead.'
         type: array
         items:
           type: string
-  metrics_discovery_filters:
-    description: MetricsDiscoveryFilters optionally narrows which metrics are discovered. When absent, all metrics in all namespaces are discovered.
+  metrics_discovery_filter:
+    description: MetricsDiscoveryFilter selects metrics to discover within a namespace.
     type: object
     properties:
-      metric_name:
-        type: string
+      metric_names:
+        description: MetricNames restricts discovery to these metric names. When empty, all metrics in the namespace are discovered.
+        type: array
+        items:
+          type: string
       namespace:
         type: string
+      stats:
+        description: Stats selects which CloudWatch statistics to fetch for metrics discovered by this entry. Same semantics as MetricQuery.Stats.
+        type: array
+        items:
+          type: string
   stream_config:
     description: StreamConfig represents the configuration for the log stream filtering
     type: object

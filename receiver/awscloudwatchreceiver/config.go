@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/confmap"
 	"go.opentelemetry.io/collector/scraper/scraperhelper"
 )
@@ -53,18 +52,54 @@ type MetricsConfig struct {
 // MetricsDiscoveryConfig configures automatic discovery of metrics via ListMetrics.
 // Discovered metrics are then scraped with GetMetricData. Mutually exclusive with metrics (explicit list).
 type MetricsDiscoveryConfig struct {
-	Filters configoptional.Optional[MetricsDiscoveryFilters] `mapstructure:"filters"`
-	Limit   int                                              `mapstructure:"limit"` // max metrics to discover and scrape (default 100)
-	// Stats selects which CloudWatch statistics to fetch for all discovered metrics.
+	// Filters narrows which metrics are discovered. Each entry selects a namespace, optionally a
+	// set of metric names within it, and optionally the statistics to fetch for those metrics.
+	// When empty, all metrics in all namespaces are discovered.
+	Filters []MetricsDiscoveryFilter `mapstructure:"filters"`
+	Limit   int                      `mapstructure:"limit"` // max metrics to discover and scrape across all filters (default 100)
+	// Stats selects which CloudWatch statistics to fetch for discovered metrics whose filter entry
+	// does not set its own stats. Same semantics as MetricQuery.Stats.
+	//
+	// Deprecated: set stats on each filters entry instead.
+	Stats []string `mapstructure:"stats"`
+
+	// deprecatedSingleObjectFilters records that filters was given in the deprecated
+	// single-object form so a warning can be logged at receiver start.
+	deprecatedSingleObjectFilters bool
+}
+
+// MetricsDiscoveryFilter selects metrics to discover within a namespace.
+type MetricsDiscoveryFilter struct {
+	Namespace string `mapstructure:"namespace"`
+	// MetricNames restricts discovery to these metric names. When empty, all metrics in the
+	// namespace are discovered.
+	MetricNames []string `mapstructure:"metric_names"`
+	// Stats selects which CloudWatch statistics to fetch for metrics discovered by this entry.
 	// Same semantics as MetricQuery.Stats.
 	Stats []string `mapstructure:"stats"`
 }
 
-// MetricsDiscoveryFilters optionally narrows which metrics are discovered.
-// When absent, all metrics in all namespaces are discovered.
-type MetricsDiscoveryFilters struct {
-	Namespace  string `mapstructure:"namespace"`
-	MetricName string `mapstructure:"metric_name"`
+// Unmarshal accepts the deprecated single-object form of filters
+// (filters: {namespace: ..., metric_name: ...}) by converting it to a one-entry filter list,
+// mapping the singular metric_name to metric_names.
+func (d *MetricsDiscoveryConfig) Unmarshal(conf *confmap.Conf) error {
+	raw := conf.ToStringMap()
+	if f, ok := raw["filters"].(map[string]any); ok {
+		entry := make(map[string]any, len(f))
+		for k, v := range f {
+			if k == "metric_name" {
+				if v != nil && v != "" {
+					entry["metric_names"] = []any{v}
+				}
+				continue
+			}
+			entry[k] = v
+		}
+		raw["filters"] = []any{entry}
+		conf = confmap.NewFromStringMap(raw)
+		d.deprecatedSingleObjectFilters = true
+	}
+	return conf.Unmarshal(d)
 }
 
 // MetricQuery defines a single CloudWatch metric to scrape via GetMetricData.
@@ -126,6 +161,8 @@ var (
 	errMetricMissingName                = errors.New("metric must have metric_name")
 	errMetricsAndDiscoveryConfigured    = errors.New("metrics and discovery are mutually exclusive; set one or the other")
 	errInvalidDiscoveryLimit            = errors.New("metrics discovery limit must be greater than 0")
+	errDiscoveryFilterMissingNamespace  = errors.New("discovery filter must have namespace")
+	errEmptyDiscoveryMetricName         = errors.New("metric_names must not contain empty values")
 	errEmptyStatName                    = errors.New("stat name must not be empty")
 	errCollectionIntervalLessThanPeriod = errors.New("metrics collection_interval must be greater than or equal to period")
 	errInitialLookbackAndStartFrom      = errors.New("both initial_lookback and start_from are configured, Only one or the other is permitted")
@@ -189,6 +226,23 @@ func (c *Config) validateMetricsConfig() error {
 		for j, st := range discovery.Stats {
 			if st == "" {
 				return fmt.Errorf("metrics.discovery.stats[%d]: %w", j, errEmptyStatName)
+			}
+		}
+		for i, f := range discovery.Filters {
+			// The deprecated single-object form allowed filtering by metric_name alone,
+			// so namespace is only required for list-form entries.
+			if f.Namespace == "" && !discovery.deprecatedSingleObjectFilters {
+				return fmt.Errorf("metrics.discovery.filters[%d]: %w", i, errDiscoveryFilterMissingNamespace)
+			}
+			for j, name := range f.MetricNames {
+				if name == "" {
+					return fmt.Errorf("metrics.discovery.filters[%d].metric_names[%d]: %w", i, j, errEmptyDiscoveryMetricName)
+				}
+			}
+			for j, st := range f.Stats {
+				if st == "" {
+					return fmt.Errorf("metrics.discovery.filters[%d].stats[%d]: %w", i, j, errEmptyStatName)
+				}
 			}
 		}
 		return c.validateMetricsDurations()

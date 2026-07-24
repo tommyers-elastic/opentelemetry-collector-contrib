@@ -12,7 +12,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/collector/component"
-	"go.opentelemetry.io/collector/config/configoptional"
 	"go.opentelemetry.io/collector/confmap/confmaptest"
 	"go.opentelemetry.io/collector/confmap/xconfmap"
 	"go.opentelemetry.io/collector/scraper/scraperhelper"
@@ -385,7 +384,7 @@ func TestLoadMetricsConfig(t *testing.T) {
 					Period:           300 * time.Second,
 					Delay:            defaultMetricsDelay,
 					Discovery: &MetricsDiscoveryConfig{
-						Filters: configoptional.Some(MetricsDiscoveryFilters{Namespace: "AWS/EC2"}),
+						Filters: []MetricsDiscoveryFilter{{Namespace: "AWS/EC2"}},
 						Limit:   200,
 					},
 				},
@@ -420,9 +419,15 @@ func TestLoadMetricsConfig(t *testing.T) {
 					Period:           300 * time.Second,
 					Delay:            defaultMetricsDelay,
 					Discovery: &MetricsDiscoveryConfig{
-						Filters: configoptional.Some(MetricsDiscoveryFilters{Namespace: "AWS/EC2"}),
-						Limit:   100,
-						Stats:   []string{"Sum", "Average"},
+						Filters: []MetricsDiscoveryFilter{
+							{
+								Namespace:   "AWS/EC2",
+								MetricNames: []string{"CPUUtilization", "NetworkIn"},
+								Stats:       []string{"Sum", "Average"},
+							},
+							{Namespace: "AWS/RDS"},
+						},
+						Limit: 100,
 					},
 				},
 			},
@@ -438,6 +443,26 @@ func TestLoadMetricsConfig(t *testing.T) {
 					Delay:            defaultMetricsDelay,
 					Discovery: &MetricsDiscoveryConfig{
 						Limit: 50,
+					},
+				},
+			},
+		},
+		{
+			name: "metrics-discovery-deprecated",
+			expectedConfig: &Config{
+				Region: "us-east-1",
+				Logs:   defaultLogs(),
+				Metrics: MetricsConfig{
+					ControllerConfig: scraperhelper.ControllerConfig{CollectionInterval: 5 * time.Minute, InitialDelay: time.Second},
+					Period:           300 * time.Second,
+					Delay:            defaultMetricsDelay,
+					Discovery: &MetricsDiscoveryConfig{
+						Filters: []MetricsDiscoveryFilter{
+							{Namespace: "AWS/EC2", MetricNames: []string{"CPUUtilization"}},
+						},
+						Limit:                         100,
+						Stats:                         []string{"Sum", "Average"},
+						deprecatedSingleObjectFilters: true,
 					},
 				},
 			},
@@ -513,6 +538,46 @@ func TestValidateMetricsConfig(t *testing.T) {
 				Discovery: &MetricsDiscoveryConfig{Limit: 0},
 			}),
 			expectedErr: errInvalidDiscoveryLimit,
+		},
+		{
+			name: "discovery filter missing namespace",
+			config: withMetrics(MetricsConfig{
+				Discovery: &MetricsDiscoveryConfig{
+					Limit:   10,
+					Filters: []MetricsDiscoveryFilter{{MetricNames: []string{"CPUUtilization"}}},
+				},
+			}),
+			expectedErr: errDiscoveryFilterMissingNamespace,
+		},
+		{
+			name: "deprecated single-object filter without namespace is allowed",
+			config: withMetrics(MetricsConfig{
+				Discovery: &MetricsDiscoveryConfig{
+					Limit:                         10,
+					Filters:                       []MetricsDiscoveryFilter{{MetricNames: []string{"CPUUtilization"}}},
+					deprecatedSingleObjectFilters: true,
+				},
+			}),
+		},
+		{
+			name: "discovery filter empty metric name",
+			config: withMetrics(MetricsConfig{
+				Discovery: &MetricsDiscoveryConfig{
+					Limit:   10,
+					Filters: []MetricsDiscoveryFilter{{Namespace: "AWS/EC2", MetricNames: []string{""}}},
+				},
+			}),
+			expectedErr: errEmptyDiscoveryMetricName,
+		},
+		{
+			name: "discovery filter empty stat",
+			config: withMetrics(MetricsConfig{
+				Discovery: &MetricsDiscoveryConfig{
+					Limit:   10,
+					Filters: []MetricsDiscoveryFilter{{Namespace: "AWS/EC2", Stats: []string{""}}},
+				},
+			}),
+			expectedErr: errEmptyStatName,
 		},
 		{
 			name: "collection interval too short",
